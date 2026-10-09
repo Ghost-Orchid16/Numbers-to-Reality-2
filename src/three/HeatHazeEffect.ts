@@ -33,7 +33,7 @@ void mainUv(inout vec2 uv) {
   float t = along / max(uLength, 1e-4);
   if (t < -0.05 || t > 1.6) return;
   float w = uWidth * (1.0 + 1.6 * max(t, 0.0));
-  float mask = smoothstep(1.0, 0.25, abs(across) / w) * smoothstep(-0.05, 0.12, t) * smoothstep(1.6, 0.7, t);
+  float mask = (1.0 - smoothstep(0.25, 1.0, abs(across) / w)) * smoothstep(-0.05, 0.12, t) * (1.0 - smoothstep(0.7, 1.6, t));
   if (mask <= 0.0) return;
   vec2 q = vec2(across * 90.0, along * 55.0 - uTime * 7.0);
   vec2 offs = vec2(noise(q) - 0.5, noise(q + 17.3) - 0.5);

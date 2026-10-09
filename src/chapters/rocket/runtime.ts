@@ -35,6 +35,8 @@ export const rocket = {
   maxQ: { q: 0, t: 0, h: 0 },
   /** incremented whenever the trajectory is recomputed */
   version: 0,
+  /** live flight: time the exhaust stopped reaching the pad (h > 250 m) */
+  liveSteamEnd: null as number | null,
 }
 rocket.defaultTrajectory = rocket.trajectory
 rocket.view = sampleTrajectory(rocket.trajectory, 0)
@@ -84,7 +86,10 @@ export const useRocketUI = create<RocketUI>((set, get) => ({
       ended: rocket.sim.ended,
       ...(wasReset ? { playing: false, launched: false } : null),
     })
-    if (wasReset) rocket.maxQPassed = false
+    if (wasReset) {
+      rocket.maxQPassed = false
+      rocket.liveSteamEnd = null
+    }
   },
   play: () => {
     if (rocket.sim.ended) get().reset()
@@ -94,6 +99,7 @@ export const useRocketUI = create<RocketUI>((set, get) => ({
   reset: () => {
     rocket.sim.reset()
     rocket.maxQPassed = false
+    rocket.liveSteamEnd = null
     set({ playing: false, launched: false, ended: null })
   },
   setTimeScale: (timeScale) => set({ timeScale }),
@@ -115,6 +121,7 @@ export function tickRocket(dt: number): void {
       if (rocket.sim.ended) useRocketUI.setState({ playing: false, ended: rocket.sim.ended })
     }
     rocket.view = rocket.sim.metrics()
+    if (rocket.liveSteamEnd === null && rocket.view.h > 250) rocket.liveSteamEnd = rocket.sim.time
     // Before LAUNCH the rocket waits on the pad with its engine cold.
     rocket.viewTime = ui.launched ? rocket.sim.time : -1
     rocket.maxQPassed = rocket.sim.maxQ.passed
@@ -127,7 +134,36 @@ export function tickRocket(dt: number): void {
     rocket.maxQPassed = !!mq && t >= mq.t
     if (mq) rocket.maxQ = mq
   }
+  if (rocket.viewTime < 0) coldEngine(rocket.view)
+}
+
+/** Before ignition the engine is cold: no thrust, no mass flow, the pad carries the weight. */
+function coldEngine(v: RocketSnapshot): void {
+  v.engineOn = false
+  v.thrust = 0
+  v.twr = 0
+  v.mdot = 0
+  v.fFree = -v.weight * Math.sin(v.gamma) - v.drag
+  v.fNet = 0
+  v.accel = 0
+}
+
+/** Force arrows are shown in the lab, and around liftoff in the flight sequence. */
+export function forcesShown(): boolean {
+  if (rocketScroll.section === 'lab') return true
+  const tl = rocket.trajectory.liftoffTime ?? 0
+  return rocketScroll.section === 'flight' && rocket.viewTime >= 0 && rocket.viewTime < tl + 14
 }
 
 /** Engine running in the displayed state (false during the countdown). */
 export const engineFiring = (): boolean => rocket.viewTime >= 0 && rocket.view.engineOn && rocket.view.thrust > 0
+
+/** Which part of the chapter the visitor is in (set by ScrollTriggers, read by the scene). */
+export type RocketSection = 'title' | 'flight' | 'lab'
+export const rocketScroll = {
+  section: 'title' as RocketSection,
+  /** progress through the pinned flight sequence */
+  flight: 0,
+  /** 0..1 colour-wash between the flight sequence and the lab */
+  wash: 0,
+}

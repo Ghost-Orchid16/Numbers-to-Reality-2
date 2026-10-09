@@ -58,6 +58,8 @@ export interface Trajectory {
   /** speed at burnout (m/s) — compare with ideal Δv to see the losses */
   burnoutSpeed: number | null
   maxAltitude: number
+  /** first time the rocket is more than 250 m up (its exhaust no longer reaches the pad) */
+  steamEnd: number | null
 }
 
 export interface TrajectoryOptions {
@@ -75,6 +77,7 @@ export function computeTrajectory(params: RocketParams, opts: TrajectoryOptions 
   const track = new Track<TrackKey>(TRACK_KEYS, SAMPLE_DT, 4096)
   let burnoutSpeed: number | null = null
   let maxAltitude = 0
+  let steamEnd: number | null = null
 
   const record = (s: RocketSnapshot) => {
     track.push({
@@ -84,6 +87,7 @@ export function computeTrajectory(params: RocketParams, opts: TrajectoryOptions 
       pitched: s.pitched ? 1 : 0,
     })
     if (s.h > maxAltitude) maxAltitude = s.h
+    if (steamEnd === null && s.h > 250) steamEnd = s.t
   }
 
   record(sim.metrics())
@@ -113,6 +117,7 @@ export function computeTrajectory(params: RocketParams, opts: TrajectoryOptions 
     idealDeltaV: idealDeltaV(params),
     burnoutSpeed,
     maxAltitude,
+    steamEnd,
   }
 }
 
