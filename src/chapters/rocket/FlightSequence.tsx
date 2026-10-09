@@ -254,8 +254,8 @@ export function FlightSequence() {
           <LiveMetric label="Velocity" tex={cv('velocity', 'v')} varKey="velocity" read={read.velocity} />
           <LiveMetric label="Acceleration" tex={cv('accel', 'a')} varKey="accel" read={read.accel} />
           <LiveMetric label="Mass" tex={cv('mass', 'm')} varKey="mass" read={read.mass} />
-          <LiveMetric label="Thrust / weight" tex="\text{TWR}" read={read.twr} />
-          <LiveMetric label="Dynamic pressure" tex={cv('q', 'q')} varKey="q" read={read.q} />
+          <LiveMetric label="TWR" tex={`\\tfrac{${cv('thrust', 'T')}}{${cv('weight', 'mg')}}`} read={read.twr} />
+          <LiveMetric label="Dyn. pressure" tex={cv('q', 'q')} varKey="q" read={read.q} />
         </div>
         <Countdown />
         <div className="flight-eq">

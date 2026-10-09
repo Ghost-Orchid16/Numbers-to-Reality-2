@@ -1,7 +1,10 @@
 import { Vector3 } from 'three'
 
-/** Direction to the sun in the launch frame: a low dusk sun, behind and right of the hero shot. */
-export const SUN_DIR = new Vector3(0.74, 0.055, -0.67).normalize()
+/**
+ * Direction to the sun in the launch frame. Downrange (+x) is east, so a dusk sun sets in the
+ * west (−x): the rocket climbs out of the afterglow into the darker eastern sky.
+ */
+export const SUN_DIR = new Vector3(-0.72, 0.05, -0.69).normalize()
 
 /**
  * Shared sky model (linear HDR). Dusk at sea level; as the camera climbs, optical depth falls
@@ -20,15 +23,15 @@ vec3 skyColor(vec3 d) {
   float air = exp(-max(uAltitude, 0.0) / 7500.0);
   vec2 dz = d.xz + vec2(1e-5);
   float az = dot(normalize(dz), normalize(uSunDir.xz + vec2(1e-5))) * 0.5 + 0.5;
-  vec3 zenith = vec3(0.010, 0.020, 0.065);
-  vec3 high = vec3(0.035, 0.062, 0.175);
-  vec3 low = mix(vec3(0.15, 0.11, 0.21), vec3(1.05, 0.38, 0.12), pow(az, 4.0));
-  vec3 band = mix(vec3(0.40, 0.22, 0.28), vec3(1.35, 0.66, 0.22), pow(az, 3.0));
+  vec3 zenith = vec3(0.005, 0.011, 0.042);
+  vec3 high = vec3(0.020, 0.038, 0.118);
+  vec3 low = mix(vec3(0.085, 0.060, 0.135), vec3(0.78, 0.25, 0.07), pow(az, 4.0));
+  vec3 band = mix(vec3(0.26, 0.13, 0.19), vec3(1.05, 0.46, 0.14), pow(az, 3.0));
   vec3 c = mix(high, zenith, smoothstep(0.12, 1.25, xs));
   c = mix(c, low, exp(-xs * 8.0));
   c = mix(c, band, exp(-xs * 38.0) * 0.85);
   float sd = max(dot(d, normalize(uSunDir)), 0.0);
-  c += vec3(1.4, 0.6, 0.2) * pow(sd, 22.0) * 1.3 + vec3(1.0, 0.42, 0.15) * pow(sd, 5.0) * 0.22 * exp(-xs * 3.5);
+  c += vec3(1.2, 0.48, 0.14) * pow(sd, 26.0) * 0.9 + vec3(0.9, 0.34, 0.1) * pow(sd, 5.0) * 0.14 * exp(-xs * 3.5);
   // thinning air: black sky, thin glowing limb
   vec3 space = vec3(0.0012, 0.0016, 0.0045);
   float limbW = mix(10.0, 150.0, 1.0 - air);

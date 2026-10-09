@@ -75,6 +75,8 @@
   html {
     background: var(--bg);
     color: var(--fg);
+    /* nothing may widen the layout viewport on phones */
+    overflow-x: clip;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
   }

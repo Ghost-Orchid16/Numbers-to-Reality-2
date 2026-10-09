@@ -125,8 +125,8 @@
 .chapter-nav::before {
   content: '';
   position: absolute;
-  inset: 0 0 -24px 0;
-  background: linear-gradient(to bottom, color-mix(in oklab, var(--bg) 78%, transparent), transparent);
+  inset: 0 0 -36px 0;
+  background: linear-gradient(to bottom, color-mix(in oklab, var(--bg) 94%, transparent) 0%, color-mix(in oklab, var(--bg) 80%, transparent) 55%, transparent);
   pointer-events: none;
   z-index: -1;
 }
@@ -232,18 +232,19 @@
   }
 }
 
-/* scroll HUD */
+/* scroll HUD — lives in the left margin, rotated, so it never sits on content */
 .scroll-hud {
   position: fixed;
-  left: var(--margin);
-  bottom: clamp(14px, 2.4vh, 28px);
+  left: calc(var(--margin) / 2);
+  bottom: clamp(18px, 3vh, 32px);
   z-index: 40;
   pointer-events: none;
-  display: grid;
-  grid-template-columns: auto auto;
-  align-items: baseline;
-  column-gap: 0.9rem;
-  row-gap: 0.45rem;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  transform-origin: 0 100%;
+  transform: translateX(0.6rem) rotate(-90deg);
+  white-space: nowrap;
   opacity: 0;
   transition: opacity 1s var(--ease-out-expo) 0.5s;
 }
@@ -251,7 +252,7 @@
   opacity: 1;
 }
 .scroll-hud-count {
-  font-size: 0.95rem;
+  font-size: 0.82rem;
   color: var(--muted);
   letter-spacing: 0.04em;
 }
@@ -260,8 +261,7 @@
   font-weight: 600;
 }
 .scroll-hud-track {
-  grid-column: 1 / -1;
-  width: 132px;
+  width: 96px;
   height: 1px;
   background: var(--rule);
   overflow: hidden;
@@ -272,4 +272,13 @@
   background: var(--accent);
   transform-origin: 0 50%;
   transform: scaleX(0);
+}
+@media (max-width: 899px) {
+  .scroll-hud {
+    display: none;
+  }
+}
+.nav-toggle-count {
+  color: var(--accent-text);
+  margin-right: 0.5em;
 }

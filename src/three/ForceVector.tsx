@@ -38,7 +38,16 @@ export function ForceVector({
     [],
   )
   const material = useDisposable(
-    () => new MeshBasicMaterial({ color: new Color(color).multiplyScalar(1.6), toneMapped: false, transparent: true, opacity: 0.95 }),
+    // drawn over the hull like a free-body diagram
+    () =>
+      new MeshBasicMaterial({
+        color: new Color(color).multiplyScalar(1.6),
+        toneMapped: false,
+        transparent: true,
+        opacity: 0.95,
+        depthTest: false,
+        depthWrite: false,
+      }),
     [color],
   )
   const st = useMemo<VectorState & { q: Quaternion; up: Vector3; tip: Vector3; unit: Vector3 }>(
@@ -79,8 +88,8 @@ export function ForceVector({
 
   return (
     <group ref={group} visible={false}>
-      <mesh ref={shaft} geometry={geos.shaft} material={material} renderOrder={8} />
-      <mesh ref={head} geometry={geos.head} material={material} renderOrder={8} />
+      <mesh ref={shaft} geometry={geos.shaft} material={material} renderOrder={20} />
+      <mesh ref={head} geometry={geos.head} material={material} renderOrder={20} />
     </group>
   )
 }

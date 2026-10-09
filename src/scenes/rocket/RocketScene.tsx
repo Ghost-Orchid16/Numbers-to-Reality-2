@@ -81,7 +81,7 @@ function Lighting() {
     s.color.copy(SUN_DUSK).lerp(SUN_SPACE, space)
     s.intensity = 1.5 + 2.2 * space
     s.castShadow = shadows && frame.altitude < 400
-    hemi.current.intensity = (0.75 + 0.25 * frame.ambient) * frame.handoff.presence + 0.15
+    hemi.current.intensity = (0.42 + 0.18 * frame.ambient) * frame.handoff.presence + 0.12
   })
   return (
     <>
@@ -101,7 +101,7 @@ function Lighting() {
         shadow-camera-near={10}
         shadow-camera-far={500}
       />
-      <hemisphereLight ref={hemi} args={['#33498A', '#1A130D', 0.9]} />
+      <hemisphereLight ref={hemi} args={['#2E4584', '#140F0B', 0.6]} />
     </>
   )
 }
@@ -153,11 +153,11 @@ export default function RocketScene() {
       <RocketForces />
       <Lighting />
       <Environment resolution={256} frames={1} background={false}>
-        <Lightformer form="rect" intensity={2.6} color="#FF9A5C" position={[70, 4, -62]} scale={[150, 16, 1]} target={[0, 6, 0]} />
-        <Lightformer form="rect" intensity={0.8} color="#33508F" position={[0, 90, 0]} rotation-x={Math.PI / 2} scale={[260, 260, 1]} />
-        <Lightformer form="rect" intensity={0.4} color="#6B5A8E" position={[-80, 8, 70]} scale={[160, 30, 1]} target={[0, 6, 0]} />
-        <Lightformer form="rect" intensity={5} color="#EAF2FF" position={[-31, 12, 27]} scale={[4, 2, 1]} target={[0, 12, 0]} />
-        <Lightformer form="rect" intensity={5} color="#EAF2FF" position={[27, 12, 31]} scale={[4, 2, 1]} target={[0, 12, 0]} />
+        <Lightformer form="rect" intensity={2.2} color="#FF8E4F" position={[-72, 4, -66]} scale={[150, 14, 1]} target={[0, 6, 0]} />
+        <Lightformer form="rect" intensity={0.55} color="#2B4580" position={[0, 90, 0]} rotation-x={Math.PI / 2} scale={[260, 260, 1]} />
+        <Lightformer form="rect" intensity={0.3} color="#5B4C80" position={[80, 8, 70]} scale={[160, 30, 1]} target={[0, 6, 0]} />
+        <Lightformer form="rect" intensity={0.7} color="#EAF2FF" position={[31, 14, 24]} scale={[12, 5, 1]} target={[0, 12, 0]} />
+        <Lightformer form="rect" intensity={0.5} color="#EAF2FF" position={[-30, 14, -20]} scale={[12, 5, 1]} target={[0, 12, 0]} />
         <Lightformer form="ring" intensity={1.2} color="#FF7A33" position={[0, -6, 0]} scale={8} target={[0, 10, 0]} />
       </Environment>
       <RocketCamera />

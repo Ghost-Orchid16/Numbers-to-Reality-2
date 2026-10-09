@@ -25,6 +25,13 @@ export function Cursor() {
     const lag = { x: -100, y: -100 }
     let visible = false
 
+    const hover = (el: Element | null) => {
+      const target = el?.closest<HTMLElement>('a, button, input, select, label, [role="slider"], [data-cursor]')
+      const label = target?.dataset.cursor ?? ''
+      r.classList.toggle('is-active', !!target)
+      if (hint.current && hint.current.textContent !== label) hint.current.textContent = label
+      r.classList.toggle('has-hint', !!label)
+    }
     const onMove = (e: PointerEvent) => {
       if (e.pointerType !== 'mouse') return
       pos.x = e.clientX
@@ -35,20 +42,20 @@ export function Cursor() {
         lag.y = pos.y
         gsap.to([d, r], { autoAlpha: 1, duration: 0.3, overwrite: 'auto' })
       }
-      const target = (e.target as Element | null)?.closest<HTMLElement>(
-        'a, button, input, select, label, [role="slider"], [data-cursor]',
-      )
-      const label = target?.dataset.cursor ?? ''
-      r.classList.toggle('is-active', !!target)
-      if (hint.current && hint.current.textContent !== label) hint.current.textContent = label
-      r.classList.toggle('has-hint', !!label)
+      hover(e.target as Element | null)
     }
+    // the page scrolls under a still pointer: re-check what is under it
+    const onScroll = () => visible && hover(document.elementFromPoint(pos.x, pos.y))
     const onLeave = () => {
       visible = false
       gsap.to([d, r], { autoAlpha: 0, duration: 0.3, overwrite: 'auto' })
     }
     const onDown = () => r.classList.add('is-down')
-    const onUp = () => r.classList.remove('is-down')
+    const onUp = () => {
+      r.classList.remove('is-down')
+      // labels change on click (Launch → Pause): re-read after React re-renders
+      requestAnimationFrame(() => visible && hover(document.elementFromPoint(pos.x, pos.y)))
+    }
     const tick = () => {
       lag.x += (pos.x - lag.x) * k
       lag.y += (pos.y - lag.y) * k
@@ -56,6 +63,7 @@ export function Cursor() {
       r.style.transform = `translate3d(${lag.x}px, ${lag.y}px, 0)`
     }
     window.addEventListener('pointermove', onMove, { passive: true })
+    window.addEventListener('scroll', onScroll, { passive: true })
     document.addEventListener('pointerleave', onLeave)
     window.addEventListener('pointerdown', onDown)
     window.addEventListener('pointerup', onUp)
@@ -63,6 +71,7 @@ export function Cursor() {
     return () => {
       root.classList.remove('has-custom-cursor')
       window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('scroll', onScroll)
       document.removeEventListener('pointerleave', onLeave)
       window.removeEventListener('pointerdown', onDown)
       window.removeEventListener('pointerup', onUp)

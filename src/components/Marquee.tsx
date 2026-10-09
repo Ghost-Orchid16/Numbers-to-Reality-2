@@ -33,9 +33,7 @@ export function Marquee({ items, speed = 60 }: { items: string[]; speed?: number
   const row = items.map((it, i) => (
     <span key={i} className="marquee-item">
       {it}
-      <span className="marquee-sep" aria-hidden="true">
-        ✦
-      </span>
+      <span className="marquee-sep" aria-hidden="true" />
     </span>
   ))
   return (

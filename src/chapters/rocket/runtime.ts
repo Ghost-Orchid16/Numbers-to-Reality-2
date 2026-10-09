@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { usePrefs } from '../../state/prefs'
 import { DEFAULT_ROCKET, type RocketParams } from '../../sim/rocket/model'
 import { RocketSim, type EndReason, type RocketSnapshot } from '../../sim/rocket/rocketSim'
 import { computeTrajectory, sampleTrajectory, type Trajectory } from '../../sim/rocket/trajectory'
@@ -139,6 +140,8 @@ export function tickRocket(dt: number): void {
 
 /** Before ignition the engine is cold: no thrust, no mass flow, the pad carries the weight. */
 function coldEngine(v: RocketSnapshot): void {
+  v.onPad = true
+  v.pitched = false
   v.engineOn = false
   v.thrust = 0
   v.twr = 0
@@ -150,7 +153,8 @@ function coldEngine(v: RocketSnapshot): void {
 
 /** Force arrows are shown in the lab, and around liftoff in the flight sequence. */
 export function forcesShown(): boolean {
-  if (rocketScroll.section === 'lab') return true
+  if (rocketScroll.section === 'lab')
+    return !rocketScroll.reading && !(rocketScroll.side === 'right' && usePrefs.getState().compact)
   const tl = rocket.trajectory.liftoffTime ?? 0
   return rocketScroll.section === 'flight' && rocket.viewTime >= 0 && rocket.viewTime < tl + 14
 }
@@ -166,4 +170,8 @@ export const rocketScroll = {
   flight: 0,
   /** 0..1 colour-wash between the flight sequence and the lab */
   wash: 0,
+  /** which side of the screen the rocket is framed on in the live sections */
+  side: 'left' as 'left' | 'right',
+  /** past the maths: the reality check and colophon are reading space, no overlays */
+  reading: false,
 }

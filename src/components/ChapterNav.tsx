@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { CHAPTERS } from '../content/chapters'
+import { CHAPTER_COUNT, CHAPTERS, chapterById } from '../content/chapters'
 import { scrollToTarget } from '../motion/scroll'
 import { useDirector } from '../state/director'
 
@@ -65,6 +65,9 @@ export function ChapterNav() {
         aria-controls="nav-sheet"
         onClick={() => setOpen((o) => !o)}
       >
+        <span className="nav-toggle-count data" aria-hidden="true">
+          {chapterById(active).code} / {String(CHAPTER_COUNT).padStart(2, '0')}
+        </span>
         {open ? 'Close' : 'Chapters'}
       </button>
       <div id="nav-sheet" ref={menuRef} className="nav-sheet interactive" data-open={open || undefined} hidden={!open}>

@@ -138,8 +138,8 @@ export function RocketLab() {
               <LiveMetric label="Velocity" tex={cv('velocity', 'v')} varKey="velocity" read={read.velocity} />
               <LiveMetric label="Acceleration" tex={cv('accel', 'a')} varKey="accel" read={read.accel} />
               <LiveMetric label="Mass" tex={cv('mass', 'm')} varKey="mass" read={read.mass} />
-              <LiveMetric label="Thrust / weight" tex="\text{TWR}" read={read.twr} />
-              <LiveMetric label="Dynamic pressure" tex={cv('q', 'q')} varKey="q" read={read.q} />
+              <LiveMetric label="TWR" tex={`\\tfrac{${cv('thrust', 'T')}}{${cv('weight', 'mg')}}`} read={read.twr} />
+              <LiveMetric label="Dyn. pressure" tex={cv('q', 'q')} varKey="q" read={read.q} />
             </div>
           </LabGroup>
           <LabGroup title="Vehicle">
@@ -208,7 +208,7 @@ export function RocketLab() {
               varKey="drag"
               checked={params.dragEnabled}
               onChange={(dragEnabled) => setParams({ dragEnabled })}
-              hint="D = ½ρv²C_dA, with C_d = 0.35 and A = 4.52 m²."
+              hint={`D = ½ρv²C_dA, with C_d = ${fmtFixed(params.cd, 2)} and A = πd²/4 = ${fmtFixed(derived.area(), 2)} m².`}
             />
             <VariableControl
               label="Pitch-over angle"

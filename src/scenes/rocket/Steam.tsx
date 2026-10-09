@@ -67,17 +67,17 @@ void main() {
     src = vec3(cos(a) * 6.5, ${(GROUND_Y + 1.5).toFixed(1)}, sin(a) * 6.5);
     dir = normalize(vec3(cos(a), 0.22 + 0.2 * aSeed.z, sin(a)));
   }
-  float v0 = uLoop > 0.5 ? 1.2 + aSeed.w : 16.0 + 16.0 * aSeed.w;
+  float v0 = uLoop > 0.5 ? 1.2 + aSeed.w : (aSource > 1.5 ? 5.0 + 6.0 * aSeed.w : 16.0 + 16.0 * aSeed.w);
   float tau = uLoop > 0.5 ? 2.5 : 1.7;
   float a0 = max(age, 0.0);
   vec3 wind = vec3(-0.7, 0.0, 0.45);
   vec3 c = src + dir * v0 * tau * (1.0 - exp(-a0 / tau)) + wind * a0;
   c.y += (uLoop > 0.5 ? -0.12 : 0.32) * a0 * a0;
   c.y = max(c.y, ${(GROUND_Y + 0.5).toFixed(1)});
-  float size = uLoop > 0.5 ? 0.8 + 0.9 * a0 : 3.0 + 2.5 * aSeed.z + 3.3 * a0;
+  float size = uLoop > 0.5 ? 0.8 + 0.9 * a0 : 2.6 + 2.2 * aSeed.z + 2.6 * a0;
   float fadeIn = smoothstep(0.0, 0.35, a0);
   float fadeOut = 1.0 - smoothstep(life * 0.45, life, a0);
-  vAlpha = (age < 0.0 || age > life) ? 0.0 : fadeIn * fadeOut * (uLoop > 0.5 ? 0.22 : 0.62 * uRate);
+  vAlpha = (age < 0.0 || age > life) ? 0.0 : fadeIn * fadeOut * (uLoop > 0.5 ? 0.22 : 0.5 * uRate);
   vGlow = exp(-length(c - uNozzle) / 26.0);
   vRot = aSeed.y * 6.2831853 + a0 * (aSeed.x - 0.5) * 0.5;
   vUv = uv;

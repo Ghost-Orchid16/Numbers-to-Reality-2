@@ -62,8 +62,8 @@ export function ChapterTitle({
       // parallax: the numeral drifts slower than the page
       gsap.fromTo(
         num,
-        { yPercent: 18 },
-        { yPercent: -22, ease: 'none', scrollTrigger: { trigger: el, start: 'top bottom', end: 'bottom top', scrub: 1 } },
+        { yPercent: 12 },
+        { yPercent: -10, ease: 'none', scrollTrigger: { trigger: el, start: 'top bottom', end: 'bottom top', scrub: 1 } },
       )
       return () => split.revert()
     },

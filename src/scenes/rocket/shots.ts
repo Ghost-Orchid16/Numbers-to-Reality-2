@@ -23,8 +23,8 @@ export const POSE_PAD = pose([-36, 4.2, 60], [0, 14.5, 0], 35)
 /** Countdown push-in towards the engine section. */
 export const POSE_CLOSE = pose([-23, 1.4, 37], [0, 9.5, 0], 33)
 /** Fixed "tracking tripod" at the pad, in launch-frame metres. */
-export const TRIPOD = new Vector3(-27, 0.6, 41)
+export const TRIPOD = new Vector3(-50, 1.4, 72)
 /** Lab framing on the pad. */
-export const POSE_LAB = pose([-30, 5, 52], [0, 13, 0], 35)
+export const POSE_LAB = pose([-37, 6, 66], [0, 14, 0], 35)
 /** Hero opening shot over the glyph field. */
 export const POSE_HERO = pose([7, 26, 136], [0, 21, 0], 36)

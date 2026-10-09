@@ -30,7 +30,15 @@ export function Precompile({ needs }: { needs: string[] }) {
       hidden.forEach((o) => (o.visible = false))
       completeLoadItem('gpu:compile')
     }
-    gl.compileAsync(scene, camera).then(finish, finish)
+    // compileAsync needs KHR_parallel_shader_compile; without it compile synchronously (no warning)
+    if (gl.extensions.has('KHR_parallel_shader_compile')) gl.compileAsync(scene, camera).then(finish, finish)
+    else {
+      try {
+        gl.compile(scene, camera)
+      } finally {
+        finish()
+      }
+    }
   }, [allReady, gl, scene, camera])
 
   return null

@@ -36,15 +36,16 @@ import { GROUND_Y } from './shots'
  * every position here is in launch-frame metres (rocket base on the pad at the origin).
  */
 
-const TOWER_X = -9.6
-const TOWER_HALF = 2.1
-const TOWER_TOP = 41
+const TOWER_X = 3.2
+const TOWER_Z = -9.4
+const TOWER_HALF = 2.0
+const TOWER_TOP = 35
 
 /** Lattice tower as beam segments [start, end, thickness]. */
 function towerBeams(): [Vector3, Vector3, number][] {
   const beams: [Vector3, Vector3, number][] = []
   const xs = [TOWER_X - TOWER_HALF, TOWER_X + TOWER_HALF]
-  const zs = [-TOWER_HALF, TOWER_HALF]
+  const zs = [TOWER_Z - TOWER_HALF, TOWER_Z + TOWER_HALF]
   const corners = [
     [xs[0], zs[0]],
     [xs[1], zs[0]],
@@ -69,12 +70,13 @@ function towerBeams(): [Vector3, Vector3, number][] {
       }
     }
   }
-  // service arms (retracted, swung away from the vehicle) and a lightning rod
-  for (const y of [8, 19.5, 26.5]) {
-    beams.push([new Vector3(TOWER_X - TOWER_HALF, y, TOWER_HALF), new Vector3(TOWER_X - TOWER_HALF, y, TOWER_HALF + 6.5), 0.36])
-    beams.push([new Vector3(TOWER_X + TOWER_HALF, y, TOWER_HALF), new Vector3(TOWER_X + TOWER_HALF, y, TOWER_HALF + 6.5), 0.36])
+  // service arms, retracted: swung away from the vehicle, parallel to the tower face
+  for (const y of [6.5, 18, 25.5]) {
+    const z = TOWER_Z + TOWER_HALF
+    beams.push([new Vector3(TOWER_X + TOWER_HALF, y, z), new Vector3(TOWER_X + TOWER_HALF + 6, y, z), 0.34])
+    beams.push([new Vector3(TOWER_X + TOWER_HALF, y + 1.1, z), new Vector3(TOWER_X + TOWER_HALF + 6, y + 1.1, z), 0.16])
   }
-  beams.push([new Vector3(TOWER_X, TOWER_TOP, 0), new Vector3(TOWER_X, TOWER_TOP + 7, 0), 0.16])
+  beams.push([new Vector3(TOWER_X, TOWER_TOP, TOWER_Z), new Vector3(TOWER_X, TOWER_TOP + 7, TOWER_Z), 0.16])
   return beams
 }
 
@@ -112,7 +114,8 @@ function mountGeometry(): BufferGeometry {
   const deck = new ExtrudeGeometry(s, { depth: 1.5, bevelEnabled: true, bevelSize: 0.06, bevelThickness: 0.06, bevelSegments: 1 })
   deck.rotateX(-Math.PI / 2)
   deck.translate(0, -1.5, 0)
-  const parts: BufferGeometry[] = [deck.toNonIndexed()]
+  const flat = (g: BufferGeometry) => (g.index ? g.toNonIndexed() : g.clone())
+  const parts: BufferGeometry[] = [flat(deck)]
   deck.dispose()
   for (const [x, z] of [
     [-5.6, -5.6],
@@ -122,7 +125,7 @@ function mountGeometry(): BufferGeometry {
   ]) {
     const leg = new BoxGeometry(2.2, -1.5 - GROUND_Y, 2.2)
     leg.translate(x, (GROUND_Y - 1.5) / 2, z)
-    parts.push(leg.toNonIndexed())
+    parts.push(flat(leg))
     leg.dispose()
   }
   // hold-down clamps around the aft skirt
@@ -132,7 +135,7 @@ function mountGeometry(): BufferGeometry {
     c.translate(0, 0.55, 0)
     c.applyMatrix4(new Matrix4().makeRotationY(-a))
     c.applyMatrix4(new Matrix4().makeTranslation(Math.cos(a) * 1.75, 0, Math.sin(a) * 1.75))
-    parts.push(c.toNonIndexed())
+    parts.push(flat(c))
     c.dispose()
   }
   const merged = mergeGeometries(parts)!
@@ -210,7 +213,7 @@ export function LaunchSite() {
       mount: mountGeometry(),
       ground: new PlaneGeometry(9000, 9000, 1, 1).rotateX(-Math.PI / 2).translate(0, GROUND_Y, 0),
       trench: new PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
-      mast: new CylinderGeometry(0.28, 0.75, 1, 10, 1),
+      mast: new CylinderGeometry(0.16, 0.42, 1, 10, 1),
       lampHead: new BoxGeometry(1.6, 0.9, 0.35),
       pole: new CylinderGeometry(0.16, 0.22, 1, 8, 1),
       beacon: new SphereGeometry(0.32, 12, 8),
@@ -228,6 +231,8 @@ export function LaunchSite() {
     const dark = new MeshStandardMaterial({ color: '#07070A', roughness: 1 })
     const silhouette = new MeshStandardMaterial({ color: '#16171D', roughness: 0.9 })
     const ground = makeGroundMaterial(presence)
+    ground.envMapIntensity = 0.3
+    concrete.envMapIntensity = 0.45
     for (const m of [concrete, steel, paintedSteel]) applyDissolve(m, site, 'world')
     return {
       concrete,
@@ -236,7 +241,7 @@ export function LaunchSite() {
       dark,
       silhouette,
       ground,
-      lamp: new MeshBasicMaterial({ color: new Color(7, 7.6, 8.2), toneMapped: false }),
+      lamp: new MeshBasicMaterial({ color: new Color(2.4, 2.6, 2.9), toneMapped: false }),
       beacon: new MeshBasicMaterial({ color: new Color(9, 0.5, 0.3), toneMapped: false }),
       window: new MeshBasicMaterial({ color: new Color(2.4, 1.6, 0.8), toneMapped: false }),
       wire: new LineBasicMaterial({ color: '#2B2E36', transparent: true, opacity: 0.8 }),
@@ -281,9 +286,9 @@ export function LaunchSite() {
   const floods = useMemo(
     () =>
       [
-        [-31, 27],
-        [27, 31],
-        [-25, -35],
+        [-30, -20],
+        [31, 24],
+        [26, -30],
       ].map(([x, z]) => new Vector3(x, GROUND_Y, z)),
     [],
   )
@@ -335,7 +340,7 @@ export function LaunchSite() {
         </group>
       ))}
       <group ref={beaconsRef}>
-        <mesh geometry={geos.beacon} material={mats.beacon} position={[TOWER_X, TOWER_TOP + 7.3, 0]} />
+        <mesh geometry={geos.beacon} material={mats.beacon} position={[TOWER_X, TOWER_TOP + 7.3, TOWER_Z]} />
         {masts.map((p, i) => (
           <mesh key={i} geometry={geos.beacon} material={mats.beacon} position={[p.x, GROUND_Y + 74.4, p.z]} />
         ))}

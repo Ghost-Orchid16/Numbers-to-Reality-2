@@ -54,9 +54,10 @@ void main() {
   // ocean: dark water + sky reflection (Fresnel) + sun glint
   vec3 r = reflect(-v, n);
   float fres = 0.02 + 0.98 * pow(1.0 - max(dot(n, v), 0.0), 5.0);
-  vec3 water = vec3(0.003, 0.010, 0.020) * (0.25 + max(ndl, 0.0) * 3.0) + skyColor(r) * fres;
-  float glint = pow(max(dot(r, sun), 0.0), 380.0) * 9.0 + pow(max(dot(r, sun), 0.0), 40.0) * 0.4;
-  water += vec3(1.35, 0.72, 0.38) * glint * smoothstep(-0.03, 0.06, ndl);
+  // wind-roughened water: grazing reflectance is capped well below a mirror
+  vec3 water = vec3(0.002, 0.006, 0.013) * (0.25 + max(ndl, 0.0) * 3.0) + skyColor(r) * min(fres, 0.5) * 0.85;
+  float glint = pow(max(dot(r, sun), 0.0), 900.0) * 14.0 + pow(max(dot(r, sun), 0.0), 90.0) * 0.35;
+  water += vec3(1.3, 0.62, 0.3) * glint * smoothstep(-0.03, 0.06, ndl);
   // land: twilight-lit ground, cities on the night side
   float twilight = smoothstep(-0.12, 0.25, ndl);
   vec3 ground = mix(vec3(0.006, 0.006, 0.009), vec3(0.06, 0.05, 0.035), twilight) * (0.7 + 0.6 * fbm(n * 60.0));
@@ -73,15 +74,23 @@ void main() {
 const atmosphere = /* glsl */ `
 uniform vec3 uSunDir;
 uniform float uFade;
+uniform vec3 uCenter;
+uniform float uPlanetR;
 varying vec3 vWorld;
 varying vec3 vN;
 void main() {
   vec3 n = normalize(vN);
   vec3 v = normalize(cameraPosition - vWorld);
-  float rim = pow(1.0 - abs(dot(n, v)), 5.0);
+  // the glow belongs to the thin shell beyond the limb, not to the surface seen through it
+  vec3 ro = cameraPosition - uCenter;
+  vec3 rd = -v;
+  float b = dot(ro, rd);
+  float disc = b * b - (dot(ro, ro) - uPlanetR * uPlanetR);
+  float hitsPlanet = (disc > 0.0 && -b - sqrt(max(disc, 0.0)) > 0.0) ? 1.0 : 0.0;
+  float rim = pow(1.0 - abs(dot(n, v)), 3.0) * mix(1.0, 0.08, hitsPlanet);
   float sunSide = smoothstep(-0.35, 0.35, dot(n, normalize(uSunDir)));
   vec3 col = mix(vec3(0.03, 0.10, 0.35), vec3(0.25, 0.45, 1.0), sunSide) + vec3(1.0, 0.45, 0.2) * pow(max(dot(n, normalize(uSunDir)), 0.0), 8.0) * 0.4;
-  gl_FragColor = vec4(col * rim * 1.6 * uFade, 1.0);
+  gl_FragColor = vec4(col * rim * 0.9 * uFade, 1.0);
 }
 `
 
@@ -112,7 +121,7 @@ export function Planet() {
       new ShaderMaterial({
         vertexShader: vertex,
         fragmentShader: atmosphere,
-        uniforms: { uSunDir: { value: SUN_DIR }, uFade: { value: 0 } },
+        uniforms: { uSunDir: { value: SUN_DIR }, uFade: { value: 0 }, uCenter: { value: new Vector3() }, uPlanetR: { value: 1 } },
         side: FrontSide,
         blending: AdditiveBlending,
         transparent: true,
@@ -138,6 +147,8 @@ export function Planet() {
     s.scale.setScalar(R / k)
     a.position.copy(s.position)
     a.scale.setScalar((R * 1.013) / k)
+    ;(atmoMaterial.uniforms.uCenter.value as Vector3).copy(s.position)
+    atmoMaterial.uniforms.uPlanetR.value = R / k
     const camAlt = Math.max(0, frame.altitude + cam.position.y)
     const u = material.uniforms
     u.uAltitude.value = camAlt

@@ -27,10 +27,10 @@ export function ScrollHUD() {
         <span className="scroll-hud-sep"> / </span>
         <span>{String(CHAPTER_COUNT).padStart(2, '0')}</span>
       </div>
-      <div className="label scroll-hud-name">{meta.nav}</div>
       <div className="scroll-hud-track">
         <div ref={bar} className="scroll-hud-bar" />
       </div>
+      <div className="label scroll-hud-name">{meta.nav}</div>
     </div>
   )
 }

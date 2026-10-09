@@ -77,6 +77,9 @@ export function RocketCamera() {
       shot.target.copy(POSE_PAD.target)
       shot.fov = POSE_PAD.fov
       shot.smooth = 0.6
+      // leave the title its column: rocket to the right on wide screens, lower on phones
+      if (compact) shot.shiftY = 0.12
+      else shot.shiftX = 0.2
     } else if (section === 'flight') {
       const tr = rocket.trajectory
       const tl = tr.liftoffTime ?? 0
@@ -89,7 +92,8 @@ export function RocketCamera() {
       } else {
         // A — tripod fixed at the pad, tracking the climbing rocket
         s.a.copy(TRIPOD).sub(frame.pos)
-        s.ta.copy(axis).multiplyScalar(13)
+        // hold the pad and the steam in frame for the first seconds, then tilt up with the climb
+        s.ta.copy(axis).multiplyScalar(4 + 9 * smoothstep(tl + 1, tl + 9, t))
         // B — close chase, below and behind
         s.b.set(-31, -15, 50)
         s.tb.copy(axis).multiplyScalar(15)
@@ -124,7 +128,7 @@ export function RocketCamera() {
       shot.fov = 35
       shot.smooth = 0.45
       if (compact) shot.shiftY = -0.2
-      else shot.shiftX = -0.17
+      else shot.shiftX = rocketScroll.side === 'right' ? 0.22 : -0.13
     }
 
     // damped follow

@@ -76,7 +76,7 @@ export function IntroSection() {
         autoAlpha: 0,
         y: reduced ? 0 : -60,
         ease: 'none',
-        scrollTrigger: { trigger: el, start: '18% top', end: '34% top', scrub: reduced ? true : 1 },
+        scrollTrigger: { trigger: el, start: '11% top', end: '25% top', scrub: reduced ? true : 1 },
       })
       gsap.fromTo(
         caption,
@@ -84,14 +84,14 @@ export function IntroSection() {
         {
           autoAlpha: 1,
           ease: 'none',
-          scrollTrigger: { trigger: el, start: '38% top', end: '46% top', scrub: true },
+          scrollTrigger: { trigger: el, start: '30% top', end: '38% top', scrub: true },
         },
       )
       gsap.to(caption, {
         autoAlpha: 0,
         ease: 'none',
         immediateRender: false,
-        scrollTrigger: { trigger: el, start: '74% top', end: '84% top', scrub: true },
+        scrollTrigger: { trigger: el, start: '64% top', end: '74% top', scrub: true },
       })
     },
     { scope: root, dependencies: [ready, reduced] },
@@ -101,6 +101,7 @@ export function IntroSection() {
     <ChapterWorld chapter={CHAPTERS[0]} label="Introduction — Numbers to Reality">
       <div ref={root} className="hero-scroll">
         <div className="hero-sticky">
+          <div className="hero-scrim" aria-hidden="true" />
           <div className="hero-copy grid-12">
             <p className="label hero-kicker" data-hero-fade>
               [ 00 ] — A museum of working mathematics
