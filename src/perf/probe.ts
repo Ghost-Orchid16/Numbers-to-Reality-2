@@ -22,7 +22,7 @@ export interface FrameRow {
   js: number
   /** main-thread time of the whole frame: rAF + style + layout + paint (ms) */
   main: number
-  /** window.scrollY at frame start */
+  /** window.scrollY after the frame (read once layout is clean) */
   y: number
   calls: number
   tris: number
@@ -80,6 +80,8 @@ export const probe = {
   /** label for the current phase (bench pass/leg) */
   tag: '',
   lastPrograms: 0,
+  /** scroll position after the last completed frame (read when layout is clean) */
+  lastY: 0,
 }
 
 /** Called once by the Stage when the renderer exists (cheap: two assignments otherwise). */
@@ -94,7 +96,7 @@ export function registerRenderer(gl: WebGLRenderer, scene: Scene): void {
 
 export function logEvent(kind: EventRow['kind'], detail: string, ms?: number): void {
   if (!probe.installed) return
-  probe.events.push({ t: performance.now(), y: window.scrollY, kind, detail, ms })
+  probe.events.push({ t: performance.now(), y: probe.lastY, kind, detail, ms })
   if (probe.events.length > 4000) probe.events.splice(0, 1000)
 }
 
@@ -102,11 +104,13 @@ let curTs = -1
 let prevTs = -1
 let curStart = 0
 let curJs = 0
-let curY = 0
 
 function endFrame(): void {
   if (curTs < 0) return
   const main = performance.now() - curStart
+  // after the frame's style/layout/paint, so reading the scroll position forces nothing
+  const curY = window.scrollY
+  probe.lastY = curY
   const dt = prevTs >= 0 ? curTs - prevTs : 0
   const i = probe.frames % RING
   probe.ring.t[i] = curTs
@@ -144,7 +148,6 @@ function beginFrame(ts: number, channel: MessageChannel): void {
   curTs = ts
   curStart = performance.now()
   curJs = 0
-  curY = window.scrollY
   probe.gl?.info.reset()
   channel.port2.postMessage(0)
 }
@@ -225,7 +228,7 @@ function installLoafObserver(): void {
           scriptMs: renderStart - e.startTime,
           rafMs: Math.max(0, styleStart - renderStart),
           layoutMs: Math.max(0, end - styleStart),
-          y: window.scrollY,
+          y: probe.lastY,
           tag: probe.tag,
           scripts: [...e.scripts]
             .sort((a, b) => b.duration - a.duration)

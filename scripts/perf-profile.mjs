@@ -52,6 +52,8 @@ await browser.startTracing(page, {
     'v8',
     'toplevel',
     'blink.user_timing',
+    'disabled-by-default-devtools.timeline.invalidationTracking',
+    'disabled-by-default-devtools.timeline.stack',
   ],
 })
 const t0Probe = await page.evaluate(() => performance.now())
@@ -209,10 +211,60 @@ const hitches = tasks.map((t) => {
     topFunctions: top,
   }
 })
-// attach probe events (performance.now based) to hitches by scroll position + order is enough for reading
+// ── style: what gets recalculated every frame, and what invalidates it ─────────────────────
+const recalcs = main.filter((e) => e.name === 'UpdateLayoutTree')
+const elementsPerRecalc = recalcs.map((e) => e.args?.elementCount ?? e.args?.beginData?.elementCount ?? 0)
+const frameTasks = main
+  .filter((e) => e.name === 'RunTask')
+  .filter((t) => main.some((e) => e.name === 'FireAnimationFrame' && e.ts >= t.ts && e.ts <= t.ts + t.dur))
+const perFrame = frameTasks.map((t) => {
+  const inside = recalcs.filter((e) => e.ts >= t.ts && e.ts <= t.ts + t.dur)
+  return {
+    recalcs: inside.length,
+    elements: inside.reduce((a, e) => a + (e.args?.elementCount ?? 0), 0),
+    styleMs: inside.reduce((a, e) => a + e.dur / 1000, 0),
+  }
+})
+const pct = (arr, p) => {
+  if (!arr.length) return 0
+  const s2 = [...arr].sort((x, y) => x - y)
+  return s2[Math.min(s2.length - 1, Math.round((s2.length - 1) * p))]
+}
+// forced recalcs: UpdateLayoutTree inside a script event, with the JS function that read layout
+const jsEvents = main.filter((e) => ['FunctionCall', 'FireAnimationFrame', 'EventDispatch', 'TimerFire'].includes(e.name))
+const forcedBy = new Map()
+for (const r of recalcs) {
+  const host = jsEvents.find((j) => r.ts >= j.ts && r.ts + r.dur <= j.ts + j.dur)
+  if (!host) continue
+  const st = r.args?.beginData?.stackTrace ?? []
+  const top = st[0] ? `${st[0].functionName || '(anonymous)'} ${(st[0].url ?? '').split('/').pop()}:${st[0].lineNumber}` : `(no stack) in ${host.name}`
+  const cur = forcedBy.get(top) ?? { count: 0, ms: 0, elements: 0 }
+  cur.count++
+  cur.ms += r.dur / 1000
+  cur.elements += r.args?.elementCount ?? 0
+  forcedBy.set(top, cur)
+}
+// invalidations: which node and why
+const inval = new Map()
+for (const e of events) {
+  if (!e.name?.endsWith('InvalidationTracking')) continue
+  const d = e.args?.data ?? {}
+  const key = `${e.name.replace('InvalidationTracking', '')} · ${d.reason ?? '?'} · ${d.nodeName ?? '?'}${d.changedClass ? ` .${d.changedClass}` : ''}${d.changedAttribute ? ` [${d.changedAttribute}]` : ''}${d.changedPseudo ? ` :${d.changedPseudo}` : ''}`
+  inval.set(key, (inval.get(key) ?? 0) + 1)
+}
+const style = {
+  frames: perFrame.length,
+  recalcsPerFrame: { p50: pct(perFrame.map((f) => f.recalcs), 0.5), p95: pct(perFrame.map((f) => f.recalcs), 0.95) },
+  elementsPerFrame: { p50: pct(perFrame.map((f) => f.elements), 0.5), p95: pct(perFrame.map((f) => f.elements), 0.95), max: pct(perFrame.map((f) => f.elements), 1) },
+  styleMsPerFrame: { p50: +pct(perFrame.map((f) => f.styleMs), 0.5).toFixed(2), p95: +pct(perFrame.map((f) => f.styleMs), 0.95).toFixed(2) },
+  elementsPerRecalc: { p50: pct(elementsPerRecalc, 0.5), p95: pct(elementsPerRecalc, 0.95) },
+  forcedBy: [...forcedBy.entries()].sort((a, b) => b[1].ms - a[1].ms).slice(0, 15).map(([k, v]) => ({ at: k, ...v, ms: +v.ms.toFixed(1) })),
+  invalidations: [...inval.entries()].sort((a, b) => b[1] - a[1]).slice(0, 30).map(([k, n]) => `${n}× ${k}`),
+}
 const report = {
   meta: { date: new Date().toISOString(), viewport: `${vw}×${vh}`, step, passes, minMs, query },
   sections,
+  style,
   hitches,
   probeEvents,
 }
@@ -222,4 +274,9 @@ for (const h of hitches) {
   console.log(`\n${h.ms} ms · ${h.section} (y=${h.y}, ${h.tag}) · ${JSON.stringify(h.breakdown)}`)
   for (const f of h.topFunctions.slice(0, 6)) console.log(`    ${f}`)
 }
+console.log(`\nstyle per frame: ${JSON.stringify({ recalcs: style.recalcsPerFrame, elements: style.elementsPerFrame, ms: style.styleMsPerFrame })}`)
+console.log('forced style/layout by:')
+for (const f of style.forcedBy.slice(0, 10)) console.log(`    ${f.ms} ms · ${f.count}× · ${f.elements} el · ${f.at}`)
+console.log('top invalidations:')
+for (const i of style.invalidations.slice(0, 15)) console.log(`    ${i}`)
 console.log(`\n${hitches.length} tasks ≥ ${minMs} ms · wrote ${out}`)

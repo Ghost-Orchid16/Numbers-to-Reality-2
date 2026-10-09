@@ -82,7 +82,8 @@ export function mountOverlay(): void {
     const refreshes = probe.events.filter((e) => e.kind === 'refresh')
     const lastRefresh = refreshes[refreshes.length - 1]
     const d = useDirector.getState()
-    const section = sectionAt(spans, window.scrollY)
+    // the probe's last frame position: reading window.scrollY here could force a layout
+    const section = sectionAt(spans, probe.lastY)
     el.textContent = [
       `FPS ${fmt(fps)}   frame p50 ${fmt(percentile(dts, 0.5))}  p95 ${fmt(percentile(dts, 0.95))}  p99 ${fmt(percentile(dts, 0.99))} ms`,
       `worst 5 s ${fmt(worst)} ms${worstAt >= 0 ? ` (${((now - w.t[worstAt]) / 1000).toFixed(1)} s ago)` : ''}`,
