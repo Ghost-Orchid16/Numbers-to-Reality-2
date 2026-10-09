@@ -1,0 +1,23 @@
+# dependencies
+node_modules
+
+# builds
+dist
+dist-ssr
+*.local
+node_modules/.tmp
+
+# QA output
+qa/
+
+# logs
+*.log
+npm-debug.log*
+
+# editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.sw?
