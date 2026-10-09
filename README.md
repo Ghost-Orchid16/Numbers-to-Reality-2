@@ -28,6 +28,18 @@ offline after install.
 | `npm run check` | all of the above in one go |
 | `npm run qa:shots` | (after `npm run build`) Playwright screenshots of every key scroll position (1440×900 and 390×844) into `qa/`, console-error and GPU-memory-leak checks. Flags: `--only=desktop`, `--reduced` |
 | `npm run fonts:fallbacks` | regenerate metric-matched fallback `@font-face` rules from the shipped font files |
+| `npm run bench` | (after `npm run build`) headless scroll benchmark → `perf/baseline.json` (or `--out=`): main-thread time per frame, long animation frames, GPU programs/textures/geometries created on the second pass, React commits, ScrollTrigger refreshes. See `docs/PERF.md` |
+| `npm run perf:shots` / `perf:diff` | deterministic `?still` screenshots (1920×1080, 1440×900, 390×844) into `perf/<set>/`, and their pixelmatch comparison with side-by-sides in `perf/diff/` |
+| `npm run perf:profile` / `perf:gpu` | what each long frame is made of (trace + CPU profile, `perf/profile.json`); GPU cost per scene component (`perf/gpu.json`) |
+
+## Diagnostics in the browser
+
+- `?perf` — live overlay: fps, frame-time p50/p95/p99, worst frame of the last 5 s, JS and main-thread ms per
+  frame, draw calls, `renderer.info`, DPR, render tier, chapter, long animation frames, React commits.
+- `?bench` — scrolls the page top → bottom → top twice through Lenis and shows a results card with a
+  **Copy results** button (`&speed=` px/s, default 1500; `&quality=high|medium|low` pins the render tier).
+
+Both are lazy chunks: a normal visit downloads and runs none of it.
 
 ## Deploy (static)
 

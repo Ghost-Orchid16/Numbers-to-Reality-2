@@ -1,6 +1,7 @@
 import { useFrame } from '@react-three/fiber'
 import { useMemo, useRef } from 'react'
 import { AdditiveBlending, Color, CylinderGeometry, ShaderMaterial, type Group, type PointLight } from 'three'
+import { ambientDt, ambientTime } from '../../perf/still'
 import { smoothstep } from '../../sim/core/math'
 import { useDisposable } from '../../three/useDisposable'
 import { frame } from './frame'
@@ -122,10 +123,11 @@ export function Plume() {
     if (!on) return
     const startup = smoothstep(0, 0.25, frame.ignitionAge)
     const vac = 1 - Math.pow(frame.ambient, 0.35)
-    const flicker = 0.95 + 0.05 * Math.sin(state.clock.elapsedTime * 71) * Math.sin(state.clock.elapsedTime * 13)
+    const k = ambientTime(state.clock.elapsedTime)
+    const flicker = 0.95 + 0.05 * Math.sin(k * 71) * Math.sin(k * 13)
     const length = 26 * Math.sqrt(Math.max(frame.thrustFrac, 0.05)) * (1 + 1.5 * vac) * (0.55 + 0.45 * startup)
     for (const m of mats) {
-      m.uniforms.uTime.value += dt
+      m.uniforms.uTime.value += ambientDt(dt)
       m.uniforms.uVac.value = vac
       m.uniforms.uDiamonds.value = Math.pow(frame.ambient, 0.7)
     }

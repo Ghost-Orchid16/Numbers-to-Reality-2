@@ -16,6 +16,7 @@ import {
 import { MeshSurfaceSampler } from 'three/examples/jsm/math/MeshSurfaceSampler.js'
 import { IRIDESCENT } from '../../design/worlds'
 import { trackLoad } from '../../lib/loading'
+import { ambientDt, seededRandom, STILL } from '../../perf/still'
 import { useDirector } from '../../state/director'
 import { usePrefs } from '../../state/prefs'
 import { scrollState } from '../../state/scroll'
@@ -125,6 +126,9 @@ function GlyphField() {
     void trackLoad('sampler:rocket', `Rocket hull · ${count.toLocaleString('en-US')} surface samples`, () => {
       const geo = buildRocketSampleGeometry()
       const sampler = new MeshSurfaceSampler(new Mesh(geo)).build()
+      // ?still: an RNG of its own, so the samples never depend on other code's use of Math.random
+      // (setRandomGenerator exists in three r186 but is missing from @types/three)
+      if (STILL) (sampler as unknown as { setRandomGenerator: (f: () => number) => void }).setRandomGenerator(seededRandom(0x0d0c))
       const out = new Float32Array(count * 3)
       const p = new Vector3()
       const c = Math.cos(ROCKET_YAW)
@@ -213,7 +217,7 @@ function GlyphField() {
   useFrame((_s, dt) => {
     if (!material) return
     const ph = introPhases(scrollState.intro.progress)
-    material.uniforms.uTime.value += dt
+    material.uniforms.uTime.value += ambientDt(dt)
     material.uniforms.uAssemble.value = ph.assemble
     material.uniforms.uReveal.value = ph.reveal
     material.uniforms.uDrift.value = reduced ? 0 : 1

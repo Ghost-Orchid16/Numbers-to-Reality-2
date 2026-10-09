@@ -2,6 +2,7 @@ import { useFrame } from '@react-three/fiber'
 import { useRef } from 'react'
 import { BackSide, Color, ShaderMaterial, SphereGeometry, type Mesh } from 'three'
 import { smoothstep } from '../../sim/core/math'
+import { ambientDt } from '../../perf/still'
 import { useDisposable } from '../../three/useDisposable'
 import { frame } from './frame'
 import { SKY_GLSL, SUN_DIR } from './skyChunk'
@@ -78,7 +79,7 @@ export function SkyDome() {
     u.uDip.value = Math.acos(R / (R + camAlt))
     u.uStars.value = 0.09 + 0.91 * smoothstep(8000, 70000, camAlt)
     u.uPresence.value = frame.handoff.presence
-    u.uTime.value += dt
+    u.uTime.value += ambientDt(dt)
   })
 
   return <mesh ref={mesh} geometry={geometry} material={material} renderOrder={-100} frustumCulled={false} />

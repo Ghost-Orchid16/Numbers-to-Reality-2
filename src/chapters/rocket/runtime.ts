@@ -1,5 +1,7 @@
 import { create } from 'zustand'
+import { STILL } from '../../perf/still'
 import { usePrefs } from '../../state/prefs'
+import { FIXED_DT } from '../../sim/core/types'
 import { DEFAULT_ROCKET, type RocketParams } from '../../sim/rocket/model'
 import { RocketSim, type EndReason, type RocketSnapshot } from '../../sim/rocket/rocketSim'
 import { computeTrajectory, sampleTrajectory, type Trajectory } from '../../sim/rocket/trajectory'
@@ -137,6 +139,18 @@ export function tickRocket(dt: number): void {
   }
   if (rocket.viewTime < 0) coldEngine(rocket.view)
 }
+
+// ?still (QA builds): put the live flight at exactly T+t and hold it there, for screenshots.
+if (STILL)
+  (window as unknown as { __nrStill: { flyTo: (t: number) => void } }).__nrStill = {
+    flyTo(t: number) {
+      const ui = useRocketUI.getState()
+      ui.reset()
+      ui.play()
+      rocket.sim.stepN(Math.round(t / FIXED_DT))
+      ui.pause()
+    },
+  }
 
 /** Before ignition the engine is cold: no thrust, no mass flow, the pad carries the weight. */
 function coldEngine(v: RocketSnapshot): void {

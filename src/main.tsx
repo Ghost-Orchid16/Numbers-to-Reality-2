@@ -1,3 +1,5 @@
+// Diagnostics first (?perf, ?bench, ?still) — a no-op on a normal visit.
+import './perf/boot'
 // Up-front faces only: hero (Unbounded + Instrument Serif Italic), body (Manrope), data (JetBrains Mono).
 // Every chapter's display face is lazy-loaded as it approaches (design/fonts.ts).
 import '@fontsource-variable/manrope/wght.css'
@@ -12,6 +14,7 @@ import { createRoot } from 'react-dom/client'
 import App from './App'
 import { UPFRONT_FACES } from './design/fonts'
 import { completeLoadItem, registerLoadItems } from './lib/loading'
+import { FLAGS } from './perf/flags'
 
 // The loader's denominator is known before anything completes: this is the real start-up work.
 registerLoadItems([
@@ -38,3 +41,7 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 )
+
+// ?perf / ?bench: lazy chunks, never downloaded on a normal visit
+if (FLAGS.perf) void import('./perf/overlay').then((m) => m.mountOverlay())
+if (FLAGS.bench) void import('./perf/bench').then((m) => m.runBench())

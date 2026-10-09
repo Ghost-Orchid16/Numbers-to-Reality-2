@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { gsap } from '../motion/gsap'
+import { STILL } from '../perf/still'
 import { usePrefs } from '../state/prefs'
 import { scrollState } from '../state/scroll'
 
@@ -13,7 +14,7 @@ export function Marquee({ items, speed = 60 }: { items: string[]; speed?: number
 
   useEffect(() => {
     const el = track.current
-    if (!el || reduced) return
+    if (!el || reduced || STILL) return
     let x = 0
     let skew = 0
     const tick = (_t: number, dtMs: number) => {

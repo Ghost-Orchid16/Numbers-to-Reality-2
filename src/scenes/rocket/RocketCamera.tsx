@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { Vector3, type PerspectiveCamera } from 'three'
 import { COUNTDOWN, rocket, rocketScroll } from '../../chapters/rocket/runtime'
 import { smoothstep } from '../../sim/core/math'
+import { ambientTime } from '../../perf/still'
 import { useDirector } from '../../state/director'
 import { usePrefs } from '../../state/prefs'
 import { frame } from './frame'
@@ -71,7 +72,7 @@ export function RocketCamera() {
     shot.shiftY = 0
 
     if (section === 'title') {
-      const k = state.clock.elapsedTime
+      const k = ambientTime(state.clock.elapsedTime)
       shot.pos.copy(POSE_PAD.position)
       if (!reduced) shot.pos.x += Math.sin(k * 0.11) * 1.6
       shot.target.copy(POSE_PAD.target)
@@ -149,7 +150,7 @@ export function RocketCamera() {
         (1 - smoothstep(150, 1600, frame.altitude)) *
         (section === 'flight' ? 1 : 0.5)
     }
-    const k = state.clock.elapsedTime
+    const k = ambientTime(state.clock.elapsedTime)
     cam.lookAt(
       s.look.x + shake * Math.sin(k * 47.3) * Math.sin(k * 3.1),
       s.look.y + shake * Math.sin(k * 59.7 + 1.3) * 0.7,

@@ -10,6 +10,7 @@ import {
   Vector3,
 } from 'three'
 import { smoothstep } from '../../sim/core/math'
+import { ambientDt } from '../../perf/still'
 import { useDirector } from '../../state/director'
 import { usePrefs } from '../../state/prefs'
 import { useDisposable } from '../../three/useDisposable'
@@ -211,7 +212,7 @@ export function Steam() {
     u.uGlow.value = firing ? frame.thrustFrac * smoothstep(0, 0.3, frame.ignitionAge) : 0
     u.uPresence.value = frame.handoff.presence
     const v = ventMat.uniforms
-    v.uTime.value += dt
+    v.uTime.value += ambientDt(dt)
     // vent vapour only while the cold rocket waits on the pad
     v.uPresence.value = frame.onPad && !firing ? frame.handoff.presence : Math.max(0, v.uPresence.value - dt * 1.5)
     v.uGlow.value = 0

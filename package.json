@@ -14,6 +14,11 @@
     "test:watch": "vitest",
     "fonts:fallbacks": "node scripts/font-fallbacks.mjs",
     "qa:shots": "node scripts/qa-shots.mjs",
+    "bench": "node scripts/bench.mjs",
+    "perf:shots": "node scripts/still-shots.mjs",
+    "perf:diff": "node scripts/still-diff.mjs",
+    "perf:profile": "node scripts/perf-profile.mjs",
+    "perf:gpu": "node scripts/perf-gpu.mjs",
     "check": "npm run typecheck && npm run lint && npm test && npm run build"
   },
   "dependencies": {
@@ -61,7 +66,9 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
     "globals": "^17.13.0",
+    "pixelmatch": "^7.2.0",
     "playwright": "1.56.1",
+    "pngjs": "^7.0.0",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.71.1",

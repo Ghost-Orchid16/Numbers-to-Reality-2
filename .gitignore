@@ -3,12 +3,19 @@ node_modules
 
 # builds
 dist
+dist-qa
+dist-profile
 dist-ssr
 *.local
 node_modules/.tmp
 
 # QA output
 qa/
+# full-resolution ?still screenshots (regenerate with npm run perf:shots); the reviewed
+# side-by-sides and reports in perf/diff/ and the bench JSON files are committed
+perf/before/
+perf/after/
+perf/_*
 
 # logs
 *.log

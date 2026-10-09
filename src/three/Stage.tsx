@@ -4,10 +4,15 @@ import { Suspense, useEffect, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { WORLDS } from '../design/worlds'
 import { SCENES } from '../scenes/registry'
+import { ADAPTIVE_QUALITY, FLAGS } from '../perf/flags'
+import { registerRenderer } from '../perf/probe'
 import { mountedChapters, useDirector, type Quality } from '../state/director'
 import { usePrefs } from '../state/prefs'
 import { Effects } from './Effects'
 import { Precompile } from './Precompile'
+
+// ?quality=… pins the tier before anything renders (diagnostics; the monitor is then off)
+if (FLAGS.quality) useDirector.setState({ quality: FLAGS.quality })
 
 const DOWN: Record<Quality, Quality> = { high: 'medium', medium: 'low', low: 'low' }
 const UP: Record<Quality, Quality> = { high: 'high', medium: 'high', low: 'medium' }
@@ -61,7 +66,13 @@ export default function Stage() {
   const compact = usePrefs((s) => s.compact)
   const frameloop = useVisibilityFrameloop()
   const dprMax = compact ? 1.5 : 2
-  const dpr: [number, number] = quality === 'low' ? [1, 1] : quality === 'medium' ? [1, Math.min(1.5, dprMax)] : [1, dprMax]
+  const dpr: [number, number] = FLAGS.dpr
+    ? [FLAGS.dpr, FLAGS.dpr]
+    : quality === 'low'
+      ? [1, 1]
+      : quality === 'medium'
+        ? [1, Math.min(1.5, dprMax)]
+        : [1, dprMax]
 
   return (
     <div className="stage" aria-hidden="true">
@@ -72,18 +83,21 @@ export default function Stage() {
         gl={{ antialias: false, powerPreference: 'high-performance', alpha: false, stencil: false, depth: true }}
         camera={{ fov: 35, near: 0.3, far: 120000, position: [0, 18, 140] }}
         style={{ touchAction: 'pan-y' }}
-        onCreated={({ gl }) => {
+        onCreated={({ gl, scene }) => {
           gl.setClearColor(WORLDS.intro.colors.bg, 1)
+          registerRenderer(gl, scene)
           // QA hook (screenshot script): read renderer.info to verify nothing leaks
-          if (new URLSearchParams(location.search).has('qa')) (window as unknown as { __nrQA: unknown }).__nrQA = { gl }
+          if (FLAGS.qa) (window as unknown as { __nrQA: unknown }).__nrQA = { gl }
         }}
       >
-        <PerformanceMonitor
-          flipflops={4}
-          onDecline={() => setQuality(DOWN[useDirector.getState().quality])}
-          onIncline={() => setQuality(UP[useDirector.getState().quality])}
-          onFallback={() => setQuality('low')}
-        />
+        {ADAPTIVE_QUALITY && (
+          <PerformanceMonitor
+            flipflops={4}
+            onDecline={() => setQuality(DOWN[useDirector.getState().quality])}
+            onIncline={() => setQuality(UP[useDirector.getState().quality])}
+            onFallback={() => setQuality('low')}
+          />
+        )}
         <AdaptiveDpr />
         <ClearColor />
         <SceneRouter />

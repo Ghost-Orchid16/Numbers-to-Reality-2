@@ -26,6 +26,7 @@ import {
 } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { rocketScroll } from '../../chapters/rocket/runtime'
+import { ambientTime } from '../../perf/still'
 import { CoordinateGrid } from '../../three/CoordinateGrid'
 import { useDisposable } from '../../three/useDisposable'
 import { applyDissolve, createDissolveUniforms } from './dissolve'
@@ -305,7 +306,7 @@ export function LaunchSite() {
     const g = group.current
     if (g) g.visible = frame.handoff.presence > 0.001 && frame.altitude < 60000
     // aviation beacons blink at 1 Hz
-    if (beaconsRef.current) beaconsRef.current.visible = Math.sin(state.clock.elapsedTime * Math.PI * 2) > -0.2
+    if (beaconsRef.current) beaconsRef.current.visible = Math.sin(ambientTime(state.clock.elapsedTime) * Math.PI * 2) > -0.2
     for (const s of spots.current) if (s) s.intensity = 2200 * frame.handoff.presence
     // the lab's "to scale" layer: a 10 m grid on the apron while the rocket stands there
     if (grid.current) grid.current.visible = rocketScroll.section === 'lab' && frame.altitude < 400

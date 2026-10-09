@@ -5,6 +5,7 @@ import { LiveMetric } from '../../components/LiveMetric'
 import { ScrollNarrative, type NarrativeStep } from '../../components/ScrollNarrative'
 import { cv } from '../../lib/tex'
 import { gsap, ScrollTrigger, useGSAP } from '../../motion/gsap'
+import { STILL, STILL_TIME } from '../../perf/still'
 import { usePrefs } from '../../state/prefs'
 import { flightTimeAt, keyMoments } from './flightMap'
 import { read, txt } from './readouts'
@@ -23,7 +24,8 @@ function Countdown() {
 
   useEffect(() => {
     let last = ''
-    const tick = (time: number) => {
+    const tick = (now: number) => {
+      const time = STILL ? STILL_TIME : now
       const t = rocket.viewTime
       const tl = traj().liftoffTime
       let label = ''
