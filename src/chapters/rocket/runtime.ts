@@ -72,7 +72,7 @@ function scheduleTrajectory() {
 export const useRocketUI = create<RocketUI>((set, get) => ({
   params: rocket.params,
   playing: false,
-  timeScale: 4,
+  timeScale: 1,
   mode: 'scrub',
   ended: null,
   launched: false,

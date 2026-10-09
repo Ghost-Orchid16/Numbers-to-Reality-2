@@ -92,8 +92,9 @@ export function RocketCamera() {
       } else {
         // A — tripod fixed at the pad, tracking the climbing rocket
         s.a.copy(TRIPOD).sub(frame.pos)
-        // hold the pad and the steam in frame for the first seconds, then tilt up with the climb
-        s.ta.copy(axis).multiplyScalar(4 + 9 * smoothstep(tl + 1, tl + 9, t))
+        // keep the pad and its steam in frame for the first seconds, then tilt up with the climb
+        const climb = smoothstep(tl + 2, tl + 10, t)
+        s.ta.set(-frame.pos.x, 6 - frame.pos.y, -frame.pos.z).lerp(s.d.copy(axis).multiplyScalar(10), 0.5 + 0.5 * climb)
         // B — close chase, below and behind
         s.b.set(-31, -15, 50)
         s.tb.copy(axis).multiplyScalar(15)
@@ -109,7 +110,7 @@ export function RocketCamera() {
         const wCD = smoothstep(tq + 22, tq + 75, t)
         shot.pos.lerpVectors(s.a, s.b, wAB).lerp(s.c, wBC).lerp(s.d, wCD)
         shot.target.lerpVectors(s.ta, s.tb, wAB).lerp(s.tc, wBC).lerp(s.td, wCD)
-        shot.fov = 33 + wBC * 1.5 - wCD * 3
+        shot.fov = 33 + 6 * (1 - smoothstep(tl + 3, tl + 12, t)) + wBC * 1.5 - wCD * 3
       }
       shot.smooth = 0.16
     } else {

@@ -325,10 +325,12 @@
   position: absolute;
   inset: 0 0 auto 0;
   opacity: 0;
+  visibility: hidden;
   transform: translateY(18px);
   transition:
     opacity 0.8s var(--ease-out-expo),
-    transform 1s var(--ease-out-expo);
+    transform 1s var(--ease-out-expo),
+    visibility 0s linear 0.8s;
   pointer-events: none;
 }
 .narrative-step[data-state='past'] {
@@ -336,7 +338,9 @@
 }
 .narrative-step[data-state='on'] {
   opacity: 1;
+  visibility: visible;
   transform: none;
+  transition-delay: 0s;
 }
 .narrative-kicker {
   color: var(--accent-text);
@@ -1517,8 +1521,10 @@
 .flight-frame {
   isolation: isolate;
 }
-.flight-hud {
-  grid-column: 9 / span 4;
+@media (min-width: 900px) {
+  .flight-hud {
+    grid-column: 9 / span 4;
+  }
 }
 .rocket-lab::before {
   content: '';

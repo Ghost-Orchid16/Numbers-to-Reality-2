@@ -74,6 +74,8 @@ export default function Stage() {
         style={{ touchAction: 'pan-y' }}
         onCreated={({ gl }) => {
           gl.setClearColor(WORLDS.intro.colors.bg, 1)
+          // QA hook (screenshot script): read renderer.info to verify nothing leaks
+          if (new URLSearchParams(location.search).has('qa')) (window as unknown as { __nrQA: unknown }).__nrQA = { gl }
         }}
       >
         <PerformanceMonitor

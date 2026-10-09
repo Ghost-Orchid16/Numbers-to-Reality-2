@@ -55,7 +55,8 @@ void main() {
   vec3 r = reflect(-v, n);
   float fres = 0.02 + 0.98 * pow(1.0 - max(dot(n, v), 0.0), 5.0);
   // wind-roughened water: grazing reflectance is capped well below a mirror
-  vec3 water = vec3(0.002, 0.006, 0.013) * (0.25 + max(ndl, 0.0) * 3.0) + skyColor(r) * min(fres, 0.5) * 0.85;
+  // the sea reflects *its own* sky: sea-level sky about the local vertical n, dark on the night side
+  vec3 water = vec3(0.002, 0.006, 0.013) * (0.25 + max(ndl, 0.0) * 3.0) + skyColorLocal(r, n, 0.0, 0.0) * min(fres, 0.5) * 0.85;
   float glint = pow(max(dot(r, sun), 0.0), 900.0) * 14.0 + pow(max(dot(r, sun), 0.0), 90.0) * 0.35;
   water += vec3(1.3, 0.62, 0.3) * glint * smoothstep(-0.03, 0.06, ndl);
   // land: twilight-lit ground, cities on the night side
@@ -66,7 +67,8 @@ void main() {
   vec3 c = mix(water, ground, land);
   // aerial perspective towards the limb
   float graze = pow(1.0 - max(dot(n, v), 0.0), 4.0);
-  c = mix(c, skyColor(normalize(vec3(r.x, 0.0, r.z) + vec3(0.0, 0.0001, 0.0))) * 0.7, graze * 0.85);
+  vec3 tangent = normalize(r - n * dot(r, n) + n * 1e-4);
+  c = mix(c, skyColorLocal(tangent, n, 0.0, 0.0) * 0.7, graze * 0.85);
   gl_FragColor = vec4(mix(uInk, c, uPresence), 1.0);
 }
 `

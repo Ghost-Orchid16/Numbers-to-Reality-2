@@ -25,6 +25,8 @@ import {
   type SpotLight,
 } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import { rocketScroll } from '../../chapters/rocket/runtime'
+import { CoordinateGrid } from '../../three/CoordinateGrid'
 import { useDisposable } from '../../three/useDisposable'
 import { applyDissolve, createDissolveUniforms } from './dissolve'
 import { frame } from './frame'
@@ -294,6 +296,7 @@ export function LaunchSite() {
   )
   const spotTargets = useMemo(() => floods.map(() => new Object3D()), [floods])
   const spots = useRef<(SpotLight | null)[]>([])
+  const grid = useRef<Group>(null)
   const beaconsRef = useRef<Group>(null)
 
   useFrame((state) => {
@@ -304,6 +307,8 @@ export function LaunchSite() {
     // aviation beacons blink at 1 Hz
     if (beaconsRef.current) beaconsRef.current.visible = Math.sin(state.clock.elapsedTime * Math.PI * 2) > -0.2
     for (const s of spots.current) if (s) s.intensity = 2200 * frame.handoff.presence
+    // the lab's "to scale" layer: a 10 m grid on the apron while the rocket stands there
+    if (grid.current) grid.current.visible = rocketScroll.section === 'lab' && frame.altitude < 400
   })
 
   return (
@@ -312,6 +317,9 @@ export function LaunchSite() {
       {/* flame trench running out both sides of the mount */}
       <mesh geometry={geos.trench} material={mats.dark} position={[0, GROUND_Y + 0.03, 0]} scale={[72, 1, 8]} />
       <mesh geometry={geos.mount} material={mats.concrete} castShadow receiveShadow />
+      <group ref={grid} position={[0, GROUND_Y + 0.06, 0]} visible={false}>
+        <CoordinateGrid size={100} spacing={10} major={5} color="#FFC857" opacity={0.08} />
+      </group>
       <instancedMesh ref={tower} args={[geos.beam, mats.steel, beams.length]} castShadow receiveShadow />
       {masts.map((p, i) => (
         <group key={i} position={p}>

@@ -69,7 +69,9 @@ for (const vp of VIEWPORTS) {
   page.on('pageerror', (e) => errors.push(`[pageerror] ${e.message}`))
 
   const t0 = Date.now()
-  await page.goto(url, { waitUntil: 'domcontentloaded' })
+  await page.goto(`${url}?qa`, { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(1200)
+  await page.screenshot({ path: `${outDir}${vp.name}${reduced ? '-reduced' : ''}-00-loader.png` })
   await page.waitForSelector('.loader', { state: 'detached', timeout: 180_000 })
   console.log(`${vp.name}: loader finished in ${((Date.now() - t0) / 1000).toFixed(1)} s`)
   await page.waitForTimeout(1500)
@@ -104,6 +106,31 @@ for (const vp of VIEWPORTS) {
     process.stdout.write('.')
   }
   process.stdout.write('\n')
+  // leak check: GPU resources after two full passes down and up must not grow
+  const memory = async () =>
+    page.evaluate(() => {
+      const gl = window.__nrQA?.gl
+      return gl ? { ...gl.info.memory, programs: gl.info.programs?.length ?? 0 } : null
+    })
+  const sweep = async () => {
+    for (const dir of [1, -1]) {
+      const max = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight)
+      for (let k = 0; k <= 12; k++) {
+        const f = dir === 1 ? k / 12 : 1 - k / 12
+        await page.evaluate((y) => window.scrollTo(0, y), f * max)
+        await page.waitForTimeout(350)
+      }
+    }
+  }
+  await sweep()
+  const m1 = await memory()
+  await sweep()
+  const m2 = await memory()
+  console.log(`${vp.name}: renderer.info after pass 1 ${JSON.stringify(m1)} · after pass 2 ${JSON.stringify(m2)}`)
+  if (m1 && m2 && (m2.geometries > m1.geometries || m2.textures > m1.textures)) {
+    failures++
+    console.log(`${vp.name}: GPU memory grew between passes`)
+  }
   const stats = await page.evaluate(() => ({
     height: document.documentElement.scrollHeight,
     fontsLoaded: [...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family),

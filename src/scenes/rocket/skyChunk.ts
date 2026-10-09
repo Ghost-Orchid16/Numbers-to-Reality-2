@@ -16,13 +16,18 @@ uniform vec3 uSunDir;
 uniform float uAltitude;
 uniform float uDip;
 
-vec3 skyColor(vec3 d) {
-  float e = asin(clamp(d.y, -1.0, 1.0));
-  float x = e + uDip;
+/** Sky radiance in direction d, seen from altitude h with local vertical up (dip = horizon dip). */
+vec3 skyColorLocal(vec3 d, vec3 up, float h, float dip) {
+  float e = asin(clamp(dot(d, up), -1.0, 1.0));
+  float x = e + dip;
   float xs = max(x, 0.0);
-  float air = exp(-max(uAltitude, 0.0) / 7500.0);
-  vec2 dz = d.xz + vec2(1e-5);
-  float az = dot(normalize(dz), normalize(uSunDir.xz + vec2(1e-5))) * 0.5 + 0.5;
+  float air = exp(-max(h, 0.0) / 7500.0);
+  vec3 sun = normalize(uSunDir);
+  vec3 dh = d - up * dot(d, up);
+  vec3 sh = sun - up * dot(sun, up);
+  float az = dot(normalize(dh + up * 1e-5), normalize(sh + up * 1e-5)) * 0.5 + 0.5;
+  // how far the sun is below this place's horizon: dusk → night
+  float night = 1.0 - smoothstep(-0.14, 0.02, dot(up, sun));
   vec3 zenith = vec3(0.005, 0.011, 0.042);
   vec3 high = vec3(0.020, 0.038, 0.118);
   vec3 low = mix(vec3(0.085, 0.060, 0.135), vec3(0.78, 0.25, 0.07), pow(az, 4.0));
@@ -30,8 +35,9 @@ vec3 skyColor(vec3 d) {
   vec3 c = mix(high, zenith, smoothstep(0.12, 1.25, xs));
   c = mix(c, low, exp(-xs * 8.0));
   c = mix(c, band, exp(-xs * 38.0) * 0.85);
-  float sd = max(dot(d, normalize(uSunDir)), 0.0);
+  float sd = max(dot(d, sun), 0.0);
   c += vec3(1.2, 0.48, 0.14) * pow(sd, 26.0) * 0.9 + vec3(0.9, 0.34, 0.1) * pow(sd, 5.0) * 0.14 * exp(-xs * 3.5);
+  c *= mix(1.0, 0.06, night);
   // thinning air: black sky, thin glowing limb
   vec3 space = vec3(0.0012, 0.0016, 0.0045);
   float limbW = mix(10.0, 150.0, 1.0 - air);
@@ -40,5 +46,10 @@ vec3 skyColor(vec3 d) {
   c = mix(cSpace, c, air);
   if (x < 0.0) c = mix(c, low * 0.3 * air + space, 1.0 - smoothstep(-0.06, 0.0, x));
   return c;
+}
+
+/** The sky as seen from the camera (launch-frame vertical). */
+vec3 skyColor(vec3 d) {
+  return skyColorLocal(d, vec3(0.0, 1.0, 0.0), uAltitude, uDip);
 }
 `
