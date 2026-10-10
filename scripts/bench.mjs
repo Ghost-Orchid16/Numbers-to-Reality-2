@@ -25,6 +25,7 @@ import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright'
 import { preview } from 'vite'
+import { parseTrace } from './lib/trace.mjs'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
 const arg = (name, fallback) => process.argv.find((a) => a.startsWith(`--${name}=`))?.split('=')[1] ?? fallback
@@ -102,7 +103,7 @@ const results = await page.evaluate(() => window.__nrBench.results)
 
 // ── per-frame main-thread breakdown of pass 2 from the trace ───────────────────────────────
 function frameBreakdown(buf) {
-  const events = JSON.parse(buf.toString()).traceEvents ?? []
+  const events = parseTrace(buf)
   const threads = new Map()
   for (const e of events) if (e.ph === 'M' && e.name === 'thread_name') threads.set(`${e.pid}:${e.tid}`, e.args?.name)
   // the renderer main thread with the most animation frames is the page's

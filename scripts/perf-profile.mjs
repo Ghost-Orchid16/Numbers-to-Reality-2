@@ -17,6 +17,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright'
 import { build, preview } from 'vite'
+import { parseTrace } from './lib/trace.mjs'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
 const arg = (name, fallback) => process.argv.find((a) => a.startsWith(`--${name}=`))?.split('=')[1] ?? fallback
@@ -49,11 +50,9 @@ await browser.startTracing(page, {
     'disabled-by-default-devtools.timeline',
     'disabled-by-default-v8.cpu_profiler',
     'v8.execute',
-    'v8',
     'toplevel',
     'blink.user_timing',
     'disabled-by-default-devtools.timeline.invalidationTracking',
-    'disabled-by-default-devtools.timeline.stack',
   ],
 })
 const t0Probe = await page.evaluate(() => performance.now())
@@ -107,7 +106,36 @@ await browser.close()
 await server.close()
 
 // ── analysis ────────────────────────────────────────────────────────────────────────────────
-const events = JSON.parse(buf.toString()).traceEvents ?? []
+const KEEP = new Set([
+  'thread_name',
+  'RunTask',
+  'FireAnimationFrame',
+  'FunctionCall',
+  'EventDispatch',
+  'TimerFire',
+  'UpdateLayoutTree',
+  'Layout',
+  'Paint',
+  'PrePaint',
+  'Layerize',
+  'MinorGC',
+  'MajorGC',
+  'V8.GC_SCAVENGER',
+  'V8.GC_MARK_COMPACTOR',
+  'v8.compile',
+  'V8.CompileCode',
+  'ParseHTML',
+  'EvaluateScript',
+  'Decode Image',
+  'ResizeObserver',
+  'IntersectionObserverController::computeIntersections',
+  'Profile',
+  'ProfileChunk',
+])
+const events = parseTrace(
+  buf,
+  (e) => KEEP.has(e.name) || e.name?.endsWith('InvalidationTracking') || (e.name?.startsWith('y:') && e.cat?.includes('blink.user_timing')),
+)
 const threadName = new Map()
 for (const e of events) if (e.ph === 'M' && e.name === 'thread_name') threadName.set(`${e.pid}:${e.tid}`, e.args?.name)
 const marks = events.filter((e) => e.cat?.includes('blink.user_timing') && e.name?.startsWith('y:'))
@@ -244,6 +272,71 @@ for (const r of recalcs) {
   cur.elements += r.args?.elementCount ?? 0
   forcedBy.set(top, cur)
 }
+// big recalcs: what was invalidated since the previous recalc, and which JS forced it
+const invalEvents = events
+  .filter((e) => `${e.pid}:${e.tid}` === mainKey && e.name?.endsWith('InvalidationTracking'))
+  .sort((a, b) => a.ts - b.ts)
+const firstSampleAfter = (ts) => {
+  let lo = 0
+  let hi = samples.length
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1
+    if (samples[mid].ts < ts) lo = mid + 1
+    else hi = mid
+  }
+  return lo
+}
+// the JS function on the stack when a forced recalc began: the last sample before it
+const callerAt = (ts) => {
+  const i = firstSampleAfter(ts + 50) - 1
+  const best = i >= 0 && samples[i].ts >= ts - 2000 ? samples[i] : null
+  if (!best) return '?'
+  const chain = []
+  let n = nodes.get(best.id)
+  while (n && chain.length < 6) {
+    const cf = n.callFrame ?? {}
+    if (cf.functionName && !cf.functionName.startsWith('(')) chain.push(`${cf.functionName}:${(cf.lineNumber ?? 0) + 1}`)
+    n = nodes.get(n.parent ?? -1)
+  }
+  return chain.join(' < ')
+}
+// parent links for CPU profile nodes
+for (const n of nodes.values()) for (const c of n.children ?? []) if (nodes.has(c)) nodes.get(c).parent = n.id
+let prevTs = 0
+const bigRecalcs = []
+for (const r of recalcs.slice().sort((a, b) => a.ts - b.ts)) {
+  const count = r.args?.elementCount ?? 0
+  if (count >= 200) {
+    const why = new Map()
+    for (const e of invalEvents) {
+      if (e.ts < prevTs) continue
+      if (e.ts > r.ts) break
+      const d = e.args?.data ?? {}
+      const key = `${e.name.replace('InvalidationTracking', '')} · ${d.reason ?? '?'} · ${d.nodeName ?? '?'}${d.changedClass ? ` .${d.changedClass}` : ''}${d.changedAttribute ? ` [${d.changedAttribute}]` : ''}${d.changedId ? ` #${d.changedId}` : ''}`
+      why.set(key, (why.get(key) ?? 0) + 1)
+    }
+    const host = jsEvents.find((j) => r.ts >= j.ts && r.ts + r.dur <= j.ts + j.dur)
+    bigRecalcs.push({
+      elements: count,
+      ms: +(r.dur / 1000).toFixed(1),
+      forcedIn: host ? host.name : null,
+      caller: host ? callerAt(r.ts) : null,
+      section: where(r.ts).section,
+      y: where(r.ts).y,
+      invalidations: [...why.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k, n]) => `${n}× ${k}`),
+    })
+  }
+  prevTs = r.ts + r.dur
+}
+const bigByCause = new Map()
+for (const b of bigRecalcs) {
+  const key = `${b.forcedIn ?? 'frame'} · ${b.caller ?? ''} · ${b.invalidations.slice(0, 2).join(' | ')}`
+  const cur = bigByCause.get(key) ?? { count: 0, ms: 0, elements: 0 }
+  cur.count++
+  cur.ms += b.ms
+  cur.elements += b.elements
+  bigByCause.set(key, cur)
+}
 // invalidations: which node and why
 const inval = new Map()
 for (const e of events) {
@@ -259,6 +352,8 @@ const style = {
   styleMsPerFrame: { p50: +pct(perFrame.map((f) => f.styleMs), 0.5).toFixed(2), p95: +pct(perFrame.map((f) => f.styleMs), 0.95).toFixed(2) },
   elementsPerRecalc: { p50: pct(elementsPerRecalc, 0.5), p95: pct(elementsPerRecalc, 0.95) },
   forcedBy: [...forcedBy.entries()].sort((a, b) => b[1].ms - a[1].ms).slice(0, 15).map(([k, v]) => ({ at: k, ...v, ms: +v.ms.toFixed(1) })),
+  bigRecalcsByCause: [...bigByCause.entries()].sort((a, b) => b[1].ms - a[1].ms).slice(0, 20).map(([k, v]) => ({ cause: k, ...v, ms: +v.ms.toFixed(1) })),
+  bigRecalcs: bigRecalcs.slice(0, 400),
   invalidations: [...inval.entries()].sort((a, b) => b[1] - a[1]).slice(0, 30).map(([k, n]) => `${n}× ${k}`),
 }
 const report = {
@@ -277,6 +372,8 @@ for (const h of hitches) {
 console.log(`\nstyle per frame: ${JSON.stringify({ recalcs: style.recalcsPerFrame, elements: style.elementsPerFrame, ms: style.styleMsPerFrame })}`)
 console.log('forced style/layout by:')
 for (const f of style.forcedBy.slice(0, 10)) console.log(`    ${f.ms} ms · ${f.count}× · ${f.elements} el · ${f.at}`)
+console.log('recalcs of ≥200 elements, by cause:')
+for (const b of style.bigRecalcsByCause.slice(0, 12)) console.log(`    ${b.ms} ms · ${b.count}× · ${b.elements} el · ${b.cause}`)
 console.log('top invalidations:')
 for (const i of style.invalidations.slice(0, 15)) console.log(`    ${i}`)
 console.log(`\n${hitches.length} tasks ≥ ${minMs} ms · wrote ${out}`)

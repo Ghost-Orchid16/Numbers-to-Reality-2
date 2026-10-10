@@ -17,7 +17,7 @@
     "bench": "node scripts/bench.mjs",
     "perf:shots": "node scripts/still-shots.mjs",
     "perf:diff": "node scripts/still-diff.mjs",
-    "perf:profile": "node scripts/perf-profile.mjs",
+    "perf:profile": "node --max-old-space-size=6144 scripts/perf-profile.mjs",
     "perf:gpu": "node scripts/perf-gpu.mjs",
     "check": "npm run typecheck && npm run lint && npm test && npm run build"
   },
