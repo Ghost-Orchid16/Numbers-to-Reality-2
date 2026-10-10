@@ -15,6 +15,7 @@
  *
  *   npm run build && npm run bench
  *   npm run bench -- --out=perf/after.json --viewport=1920x1080 --step=160 --dpr=1
+ *   npm run bench -- --dist=/abs/path/to/other/dist --label=<commit>   (bench another build)
  *
  * Exit code 1 when pass 2 creates GPU programs/textures/geometries (a hitch at a boundary).
  * Chromium is pre-installed (PLAYWRIGHT_BROWSERS_PATH); never `playwright install`.
@@ -165,7 +166,17 @@ function frameBreakdown(buf) {
     const styleLen = length(style)
     const layoutLen = length(layout)
     const script = length(js) - overlap(js, merge([...style, ...layout].map(([s, f]) => ({ ts: s, dur: f - s }))))
-    frames.push({ script: script / 1000, style: styleLen / 1000, layout: layoutLen / 1000, paint: length(paint) / 1000 })
+    // elements restyled: unlike durations, this does not depend on the machine's load
+    const recalcs = inside.filter((e) => e.name === 'UpdateLayoutTree').map((e) => e.args?.elementCount ?? e.args?.beginData?.elementCount ?? 0)
+    frames.push({
+      script: script / 1000,
+      style: styleLen / 1000,
+      layout: layoutLen / 1000,
+      paint: length(paint) / 1000,
+      elements: recalcs.reduce((x, y) => x + y, 0),
+      bigRecalcs: recalcs.filter((n) => n >= 500).length,
+      layouts: inside.filter((e) => e.name === 'Layout').length,
+    })
   }
   const pct = (arr, p) => {
     if (!arr.length) return 0
@@ -183,17 +194,22 @@ function frameBreakdown(buf) {
     styleMs: { p50: pct(col('style'), 0.5), p95: pct(col('style'), 0.95), max: pct(col('style'), 1) },
     layoutMs: { p50: pct(col('layout'), 0.5), p95: pct(col('layout'), 0.95), max: pct(col('layout'), 1) },
     paintMs: { p50: pct(col('paint'), 0.5), p95: pct(col('paint'), 0.95), max: pct(col('paint'), 1) },
-    scriptStyleLayoutMs: { p50: pct(total, 0.5), p95: pct(total, 0.95), max: pct(total, 1) },
+    scriptStyleLayoutMs: { p50: pct(total, 0.5), p95: pct(total, 0.95), max: pct(total, 1), mean: +(total.reduce((x, y) => x + y, 0) / Math.max(1, total.length)).toFixed(3) },
+    // load-independent counts for the whole pass
+    elementsRestyled: col('elements').reduce((x, y) => x + y, 0),
+    recalcsOf500PlusElements: col('bigRecalcs').reduce((x, y) => x + y, 0),
+    layouts: col('layouts').reduce((x, y) => x + y, 0),
   }
 }
 
 const trace = frameBreakdown(traceBuf)
-let git = ''
-try {
-  git = execSync('git rev-parse --short HEAD', { cwd: root }).toString().trim()
-} catch {
-  git = 'unknown'
-}
+let git = arg('label', '')
+if (!git)
+  try {
+    git = execSync('git rev-parse --short HEAD', { cwd: root }).toString().trim()
+  } catch {
+    git = 'unknown'
+  }
 const report = {
   meta: {
     date: new Date().toISOString(),
@@ -218,7 +234,10 @@ const p2 = results.passes[1] ?? results.passes[0]
 const line = (p) =>
   `pass ${p.pass}: ${p.frames} frames · JS/frame p95 ${p.jsMs.p95.toFixed(2)} ms · main/frame p95 ${p.mainMs.p95.toFixed(2)} ms · LoAF>50 ${p.loaf.count} · created programs ${p.created.programs} textures ${p.created.textures} geometries ${p.created.geometries} · React commits ${p.reactCommits} · refreshes ${p.scrollTriggerRefreshes}`
 for (const p of results.passes) console.log(line(p))
-if (trace) console.log(`pass 2 trace: script+style+layout per frame p50 ${trace.scriptStyleLayoutMs.p50} ms · p95 ${trace.scriptStyleLayoutMs.p95} ms (style p95 ${trace.styleMs.p95}, layout p95 ${trace.layoutMs.p95})`)
+if (trace) {
+  console.log(`pass 2 trace: script+style+layout per frame p50 ${trace.scriptStyleLayoutMs.p50} ms · p95 ${trace.scriptStyleLayoutMs.p95} ms · mean ${trace.scriptStyleLayoutMs.mean} ms (style p95 ${trace.styleMs.p95}, layout p95 ${trace.layoutMs.p95})`)
+  console.log(`pass 2 trace: ${trace.elementsRestyled} elements restyled · ${trace.recalcsOf500PlusElements} recalcs of ≥ 500 elements · ${trace.layouts} layouts`)
+}
 console.log(`CDP pass 2: script ${report.cdp.pass2.ScriptDuration.toFixed(2)} s · style ${report.cdp.pass2.RecalcStyleDuration.toFixed(2)} s (${report.cdp.pass2.RecalcStyleCount}×) · layout ${report.cdp.pass2.LayoutDuration.toFixed(2)} s (${report.cdp.pass2.LayoutCount}×)`)
 console.log(`wrote ${out}${consoleErrors.length ? ` · ${consoleErrors.length} console errors` : ''}`)
 
