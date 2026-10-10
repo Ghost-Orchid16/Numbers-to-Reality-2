@@ -123,7 +123,8 @@ export function tickRocket(dt: number): void {
       rocket.sim.step(Math.min(dt, 0.1) * ui.timeScale)
       if (rocket.sim.ended) useRocketUI.setState({ playing: false, ended: rocket.sim.ended })
     }
-    rocket.view = rocket.sim.metrics()
+    // refilled in place each frame: readers always read rocket.view fresh, never keep it
+    rocket.view = rocket.sim.metrics(rocket.view)
     if (rocket.liveSteamEnd === null && rocket.view.h > 250) rocket.liveSteamEnd = rocket.sim.time
     // Before LAUNCH the rocket waits on the pad with its engine cold.
     rocket.viewTime = ui.launched ? rocket.sim.time : -1
@@ -132,7 +133,7 @@ export function tickRocket(dt: number): void {
   } else {
     const t = rocket.scrubTime
     rocket.viewTime = t
-    rocket.view = sampleTrajectory(rocket.trajectory, Math.max(0, t))
+    rocket.view = sampleTrajectory(rocket.trajectory, Math.max(0, t), rocket.view)
     const mq = rocket.trajectory.maxQ
     rocket.maxQPassed = !!mq && t >= mq.t
     if (mq) rocket.maxQ = mq

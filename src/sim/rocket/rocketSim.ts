@@ -67,7 +67,13 @@ export interface RocketSnapshot {
   dragLoss: number
 }
 
-export function snapshotFrom(params: RocketParams, y: Float64Array, phase: Phase, t: number): RocketSnapshot {
+export function snapshotFrom(
+  params: RocketParams,
+  y: Float64Array,
+  phase: Phase,
+  t: number,
+  out?: RocketSnapshot,
+): RocketSnapshot {
   const planet = resolvePlanet(params.planet)
   const h = y[S.h]
   const v = y[S.v]
@@ -81,31 +87,31 @@ export function snapshotFrom(params: RocketParams, y: Float64Array, phase: Phase
   const weight = m * g
   const fFree = thrust - weight * Math.sin(gamma) - drag
   const fNet = phase.onPad ? 0 : fFree
-  return {
-    t,
-    v,
-    gamma,
-    h,
-    x: y[S.x],
-    m,
-    onPad: phase.onPad,
-    pitched: phase.pitched,
-    engineOn: phase.engineOn,
-    thrust,
-    g,
-    weight,
-    rho: rhoAir,
-    drag,
-    q,
-    fFree,
-    fNet,
-    accel: fNet / m,
-    twr: weight > 0 ? thrust / weight : Infinity,
-    mdot: phase.engineOn ? massFlow(params) : 0,
-    propellant: Math.max(0, m - finalMass(params)),
-    gravityLoss: y[S.gLoss],
-    dragLoss: y[S.dLoss],
-  }
+  const o = out ?? ({} as RocketSnapshot)
+  o.t = t
+  o.v = v
+  o.gamma = gamma
+  o.h = h
+  o.x = y[S.x]
+  o.m = m
+  o.onPad = phase.onPad
+  o.pitched = phase.pitched
+  o.engineOn = phase.engineOn
+  o.thrust = thrust
+  o.g = g
+  o.weight = weight
+  o.rho = rhoAir
+  o.drag = drag
+  o.q = q
+  o.fFree = fFree
+  o.fNet = fNet
+  o.accel = fNet / m
+  o.twr = weight > 0 ? thrust / weight : Infinity
+  o.mdot = phase.engineOn ? massFlow(params) : 0
+  o.propellant = Math.max(0, m - finalMass(params))
+  o.gravityLoss = y[S.gLoss]
+  o.dragLoss = y[S.dLoss]
+  return o
 }
 
 const RESET_KEYS: (keyof RocketParams)[] = ['dryMass', 'propellantMass', 'payloadMass', 'planet']
@@ -206,8 +212,9 @@ export class RocketSim implements Simulation<RocketParams, RocketSnapshot> {
     for (let i = 0; i < n && !this.ended; i++) this.substep(this.stepper.h)
   }
 
-  metrics(): RocketSnapshot {
-    return snapshotFrom(this._params, this.y, this.phase, this.t)
+  /** Current state; fills `out` when given (no allocation per frame). */
+  metrics(out?: RocketSnapshot): RocketSnapshot {
+    return snapshotFrom(this._params, this.y, this.phase, this.t, out)
   }
 
   dispose(): void {

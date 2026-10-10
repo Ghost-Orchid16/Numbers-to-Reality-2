@@ -1,7 +1,7 @@
 import { Environment, Lightformer } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
-import { Color, FogExp2, Vector3, type DirectionalLight, type Group, type HemisphereLight } from 'three'
+import { Color, FogExp2, Vector3, type Camera, type DirectionalLight, type Group, type HemisphereLight } from 'three'
 import { smoothstep } from '../../sim/core/math'
 import { setAnchor } from '../../state/anchors'
 import { useDirector } from '../../state/director'
@@ -26,22 +26,45 @@ const FOG = new Color(0.085, 0.07, 0.11)
 const SUN_DUSK = new Color('#FFAA70')
 const SUN_SPACE = new Color('#FFF6EA')
 
+interface ScreenPoint {
+  x: number
+  y: number
+  front: boolean
+}
+
+/** World point → CSS pixels, written into `out` (`p` is projected in place). */
+function project(p: Vector3, camera: Camera, size: { width: number; height: number }, out: ScreenPoint): ScreenPoint {
+  p.project(camera)
+  out.x = (p.x * 0.5 + 0.5) * size.width
+  out.y = (-p.y * 0.5 + 0.5) * size.height
+  out.front = p.z < 1
+  return out
+}
+
 /** Projects scene points for DOM annotations and drives the heat-haze effect. */
 function ScreenLinks() {
   const camera = useThree((s) => s.camera)
   const size = useThree((s) => s.size)
   const reduced = usePrefs((s) => s.reducedMotion)
   const quality = useDirector((s) => s.quality)
-  const v = useMemo(() => ({ a: new Vector3(), b: new Vector3(), p: new Vector3() }), [])
+  // scratch objects: the projections below run every frame and allocate nothing
+  const v = useMemo(
+    () => ({
+      a: new Vector3(),
+      b: new Vector3(),
+      nose: { x: 0, y: 0, front: false },
+      base: { x: 0, y: 0, front: false },
+      tail: { x: 0, y: 0, front: false },
+      origin: { x: 0, y: 0 },
+      dir: { x: 0, y: 0 },
+    }),
+    [],
+  )
 
   useFrame(() => {
-    const project = (p: Vector3) => {
-      v.p.copy(p).project(camera)
-      return { x: (v.p.x * 0.5 + 0.5) * size.width, y: (-v.p.y * 0.5 + 0.5) * size.height, front: v.p.z < 1 }
-    }
-    const nose = project(v.a.copy(frame.axis).multiplyScalar(RK.tip + 1))
+    const nose = project(v.a.copy(frame.axis).multiplyScalar(RK.tip + 1), camera, size, v.nose)
     setAnchor('rocket-nose', nose.x, nose.y, nose.front)
-    const base = project(v.a.copy(frame.axis).multiplyScalar(RK.nozzleExitY))
+    const base = project(v.a.copy(frame.axis).multiplyScalar(RK.nozzleExitY), camera, size, v.base)
     setAnchor('rocket-base', base.x, base.y, base.front)
 
     const haze = heatHaze()
@@ -53,13 +76,17 @@ function ScreenLinks() {
       haze.off()
       return
     }
-    const tail = project(v.b.copy(frame.axis).multiplyScalar(RK.nozzleExitY - 22))
+    const tail = project(v.b.copy(frame.axis).multiplyScalar(RK.nozzleExitY - 22), camera, size, v.tail)
     const ox = base.x / size.width
     const oy = 1 - base.y / size.height
     const dx = tail.x / size.width - ox
     const dy = 1 - tail.y / size.height - oy
     const len = Math.hypot(dx * (size.width / size.height), dy)
-    haze.set({ x: ox, y: oy }, { x: dx, y: dy }, Math.max(len, 0.02), Math.max(len * 0.16, 0.01), strength)
+    v.origin.x = ox
+    v.origin.y = oy
+    v.dir.x = dx
+    v.dir.y = dy
+    haze.set(v.origin, v.dir, Math.max(len, 0.02), Math.max(len * 0.16, 0.01), strength)
   })
 
   useEffect(() => () => heatHaze().off(), [])
