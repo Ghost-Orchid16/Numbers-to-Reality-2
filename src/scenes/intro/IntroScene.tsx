@@ -257,7 +257,7 @@ function IntroCamera() {
     easing.damp3(st.look, st.target, 0.2, dt)
     cam.lookAt(st.look)
     const fov = POSE_HERO.fov + (POSE_PAD.fov - POSE_HERO.fov) * e
-    if (Math.abs(cam.fov - fov) > 1e-3 || cam.view?.enabled) {
+    if (Math.abs(cam.fov - fov) > (STILL ? 0 : 1e-3) || cam.view?.enabled) {
       cam.fov = fov
       cam.clearViewOffset()
       cam.updateProjectionMatrix()

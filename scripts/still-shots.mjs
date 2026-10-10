@@ -128,7 +128,8 @@ for (const vp of VIEWPORTS) {
       await page.evaluate((t) => window.__nrStill.flyTo(t), shot.flyTo)
       await settle(page)
     }
-    await page.screenshot({ path: `${outDir}${vp.name}-${shot.name}.png` })
+    // software GL can take many seconds per frame at 1920×1080: allow for it
+    await page.screenshot({ path: `${outDir}${vp.name}-${shot.name}.png`, timeout: 900_000 })
     process.stdout.write('.')
   }
   process.stdout.write('\n')
