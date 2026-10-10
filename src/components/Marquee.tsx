@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { onFrame } from '../motion/frame'
 import { gsap } from '../motion/gsap'
 import { STILL } from '../perf/still'
 import { usePrefs } from '../state/prefs'
@@ -29,18 +30,18 @@ export function Marquee({ items, speed = 60 }: { items: string[]; speed?: number
       onScreen = entries[entries.length - 1].isIntersecting
     })
     io.observe(el.parentElement ?? el)
-    const tick = (_t: number, dtMs: number) => {
+    const tick = (_t: number, dt: number) => {
       if (!onScreen || half <= 0) return
       const v = scrollState.velocity
-      x -= ((speed + Math.min(Math.abs(v) * 0.25, 900)) * dtMs) / 1000
+      x -= (speed + Math.min(Math.abs(v) * 0.25, 900)) * dt
       if (x <= -half) x += half
       const targetSkew = gsap.utils.clamp(-12, 12, -v * 0.006)
       skew += (targetSkew - skew) * 0.12
       el.style.transform = `translate3d(${x.toFixed(2)}px,0,0) skewX(${skew.toFixed(2)}deg)`
     }
-    gsap.ticker.add(tick)
+    const offFrame = onFrame('dom', tick)
     return () => {
-      gsap.ticker.remove(tick)
+      offFrame()
       ro.disconnect()
       io.disconnect()
     }

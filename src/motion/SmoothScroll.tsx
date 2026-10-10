@@ -55,7 +55,9 @@ export function SmoothScroll() {
       scrollState.progress = l.progress
     })
     const raf = (time: number) => lenis.raf(time * 1000)
-    gsap.ticker.add(raf)
+    // prioritised: the scroll position (and ScrollTrigger.update) comes first in every frame,
+    // before GSAP renders tweens and scrubs from it (see motion/frame.ts)
+    gsap.ticker.add(raf, false, true)
     gsap.ticker.lagSmoothing(0)
     setLenis(lenis)
     return () => {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
-import { gsap } from '../motion/gsap'
+import { onFrame } from '../motion/frame'
 import { anchors } from '../state/anchors'
 
 /**
@@ -36,8 +36,8 @@ export function Annotation({
       }
       if (a && on) el.style.transform = `translate3d(${a.x.toFixed(1)}px, ${a.y.toFixed(1)}px, 0)`
     }
-    gsap.ticker.add(tick)
-    return () => gsap.ticker.remove(tick)
+    // after the canvas rendered this frame: the label sits on this frame's projection
+    return onFrame('post', tick)
   }, [anchor])
 
   return (

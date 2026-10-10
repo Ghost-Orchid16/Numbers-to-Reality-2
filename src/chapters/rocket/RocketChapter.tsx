@@ -7,6 +7,7 @@ import { Marquee } from '../../components/Marquee'
 import { CHAPTERS } from '../../content/chapters'
 import { fmtFixed, fmtSig, joinQty, qty } from '../../lib/format'
 import { useModelValue } from '../../lib/useModelValue'
+import { onFrame } from '../../motion/frame'
 import { gsap, ScrollTrigger, useGSAP } from '../../motion/gsap'
 import { RK } from '../../scenes/rocket/rocketGeometry'
 import { useDirector } from '../../state/director'
@@ -132,12 +133,9 @@ export default function RocketChapter() {
   const reduced = usePrefs((s) => s.reducedMotion)
   const items = useModelValue(marqueeItems, sameList)
 
-  // the simulation clock runs on the shared ticker, independent of the canvas
-  useEffect(() => {
-    const tick = (_t: number, dtMs: number) => tickRocket(dtMs / 1000)
-    gsap.ticker.add(tick, false, true)
-    return () => gsap.ticker.remove(tick)
-  }, [])
+  // the simulation clock: in the frame loop's 'sim' stage, after GSAP has applied this frame's
+  // scrub, so the flight shown is the one the scroll position asks for (no frame of lag)
+  useEffect(() => onFrame('sim', (_t, dt) => tickRocket(dt)), [])
 
   useGSAP(
     () => {

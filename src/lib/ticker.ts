@@ -1,4 +1,4 @@
-import { gsap } from '../motion/gsap'
+import { onFrame } from '../motion/frame'
 
 /**
  * Readout bus: DOM readouts refresh at ~12 Hz from one shared ticker (not React state),
@@ -38,9 +38,9 @@ function observer(): IntersectionObserver {
 function start() {
   if (started) return
   started = true
-  gsap.ticker.add((_t, deltaMs) => {
-    acc += deltaMs
-    if (acc < 1000 / READOUT_HZ) return
+  onFrame('dom', (_t, dt) => {
+    acc += dt
+    if (acc < 1 / READOUT_HZ) return
     acc = 0
     for (const entry of entries) if (!entry.el || near.get(entry.el) !== false) entry.fn()
   })

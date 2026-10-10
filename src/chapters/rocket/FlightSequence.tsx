@@ -5,6 +5,7 @@ import { LiveMetric } from '../../components/LiveMetric'
 import { ScrollNarrative, type NarrativeStep } from '../../components/ScrollNarrative'
 import { setText } from '../../lib/dom'
 import { cv } from '../../lib/tex'
+import { onFrame } from '../../motion/frame'
 import { gsap, ScrollTrigger, useGSAP } from '../../motion/gsap'
 import { STILL, STILL_TIME } from '../../perf/still'
 import { usePrefs } from '../../state/prefs'
@@ -50,8 +51,7 @@ function Countdown() {
         disp.current.setAttribute('scale', (6 * hot).toFixed(2))
       }
     }
-    gsap.ticker.add(tick)
-    return () => gsap.ticker.remove(tick)
+    return onFrame('dom', tick)
   }, [reduced])
 
   return (

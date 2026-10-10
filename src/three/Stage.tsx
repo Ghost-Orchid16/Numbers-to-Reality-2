@@ -1,8 +1,10 @@
 import { AdaptiveDpr, PerformanceMonitor } from '@react-three/drei'
 import { Canvas, useThree } from '@react-three/fiber'
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { WORLDS } from '../design/worlds'
+import { onFrame } from '../motion/frame'
+import { gsap } from '../motion/gsap'
 import { SCENES } from '../scenes/registry'
 import { ADAPTIVE_QUALITY, FLAGS } from '../perf/flags'
 import { registerRenderer } from '../perf/probe'
@@ -44,15 +46,21 @@ function ClearColor() {
   return null
 }
 
-/** Pause rendering entirely while the tab is hidden. */
-function useVisibilityFrameloop(): 'always' | 'never' {
-  const [loop, setLoop] = useState<'always' | 'never'>(document.hidden ? 'never' : 'always')
+/**
+ * One clock: the canvas has no render loop of its own (frameloop="never"). It is advanced from
+ * the shared frame loop's 'render' stage — after Lenis, ScrollTrigger, GSAP and the simulation
+ * have produced this frame's state, before the DOM labels that follow it (motion/frame.ts).
+ * requestAnimationFrame stops in hidden tabs, so rendering pauses with it.
+ */
+function FrameDriver() {
+  const advance = useThree((s) => s.advance)
+  const clock = useThree((s) => s.clock)
   useEffect(() => {
-    const on = () => setLoop(document.hidden ? 'never' : 'always')
-    document.addEventListener('visibilitychange', on)
-    return () => document.removeEventListener('visibilitychange', on)
-  }, [])
-  return loop
+    // R3F derives delta from the previous timestamp: start from the ticker's current time
+    clock.elapsedTime = gsap.ticker.time
+    return onFrame('render', (time) => advance(time))
+  }, [advance, clock])
+  return null
 }
 
 /**
@@ -64,7 +72,6 @@ export default function Stage() {
   const quality = useDirector((s) => s.quality)
   const setQuality = useDirector((s) => s.setQuality)
   const compact = usePrefs((s) => s.compact)
-  const frameloop = useVisibilityFrameloop()
   const dprMax = compact ? 1.5 : 2
   const dpr: [number, number] = FLAGS.dpr
     ? [FLAGS.dpr, FLAGS.dpr]
@@ -78,7 +85,7 @@ export default function Stage() {
     <div className="stage" aria-hidden="true">
       <Canvas
         dpr={dpr}
-        frameloop={frameloop}
+        frameloop="never"
         flat={false}
         gl={{ antialias: false, powerPreference: 'high-performance', alpha: false, stencil: false, depth: true }}
         camera={{ fov: 35, near: 0.3, far: 120000, position: [0, 18, 140] }}
@@ -99,6 +106,7 @@ export default function Stage() {
           />
         )}
         <AdaptiveDpr />
+        <FrameDriver />
         <ClearColor />
         <SceneRouter />
         <Precompile needs={['intro', 'rocket']} />

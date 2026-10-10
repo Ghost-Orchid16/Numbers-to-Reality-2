@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
-import { gsap } from '../motion/gsap'
+import { onFrame } from '../motion/frame'
 
 export interface NarrativeStep {
   id: string
@@ -41,8 +41,7 @@ export function ScrollNarrative({ steps, className = '' }: { steps: NarrativeSte
         n.setAttribute('aria-hidden', i === idx ? 'false' : 'true')
       })
     }
-    gsap.ticker.add(tick)
-    return () => gsap.ticker.remove(tick)
+    return onFrame('dom', tick)
   }, [])
 
   return (

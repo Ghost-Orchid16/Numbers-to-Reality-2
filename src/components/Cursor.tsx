@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { onFrame } from '../motion/frame'
 import { gsap } from '../motion/gsap'
 import { usePrefs } from '../state/prefs'
 
@@ -67,7 +68,7 @@ export function Cursor() {
     document.addEventListener('pointerleave', onLeave)
     window.addEventListener('pointerdown', onDown)
     window.addEventListener('pointerup', onUp)
-    gsap.ticker.add(tick)
+    const offFrame = onFrame('dom', tick)
     return () => {
       root.classList.remove('has-custom-cursor')
       window.removeEventListener('pointermove', onMove)
@@ -75,7 +76,7 @@ export function Cursor() {
       document.removeEventListener('pointerleave', onLeave)
       window.removeEventListener('pointerdown', onDown)
       window.removeEventListener('pointerup', onUp)
-      gsap.ticker.remove(tick)
+      offFrame()
     }
   }, [coarse, reduced])
 

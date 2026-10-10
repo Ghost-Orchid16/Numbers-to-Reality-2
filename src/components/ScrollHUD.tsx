@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { CHAPTER_COUNT, chapterById } from '../content/chapters'
-import { gsap } from '../motion/gsap'
+import { onFrame } from '../motion/frame'
 import { getLenis } from '../motion/scroll'
 import { useDirector } from '../state/director'
 import { scrollState } from '../state/scroll'
@@ -23,8 +23,7 @@ export function ScrollHUD() {
       last = scale
       bar.current.style.transform = `scaleX(${scale})`
     }
-    gsap.ticker.add(tick)
-    return () => gsap.ticker.remove(tick)
+    return onFrame('dom', tick)
   }, [])
 
   return (
