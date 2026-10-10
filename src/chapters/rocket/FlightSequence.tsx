@@ -41,8 +41,9 @@ function Countdown() {
         wrap.current?.setAttribute('data-on', label ? 'true' : 'false')
         wrap.current?.setAttribute('data-kind', label.length > 2 ? 'word' : 'digit')
       }
-      // heat shimmer: stronger once the engine burns
-      if (!reduced && turb.current && disp.current) {
+      // heat shimmer: stronger once the engine burns — only while a word or digit is showing
+      // (the filter has nothing to distort otherwise; writing it every frame re-styled it)
+      if (label && !reduced && turb.current && disp.current) {
         const hot = t >= 0 ? 1 : 0.25
         turb.current.setAttribute('baseFrequency', `0.012 ${(0.06 + 0.01 * Math.sin(time * 3)).toFixed(4)}`)
         turb.current.setAttribute('seed', String(Math.floor(time * 14) % 50))

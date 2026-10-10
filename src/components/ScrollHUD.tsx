@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { CHAPTER_COUNT, chapterById } from '../content/chapters'
 import { gsap } from '../motion/gsap'
+import { getLenis } from '../motion/scroll'
 import { useDirector } from '../state/director'
+import { scrollState } from '../state/scroll'
 
 /** "01 / 08" in the chapter colour, with page progress as a hairline. */
 export function ScrollHUD() {
@@ -11,10 +13,15 @@ export function ScrollHUD() {
   const meta = chapterById(active)
 
   useEffect(() => {
+    // progress from Lenis (its page size is cached by a ResizeObserver) or, without smooth
+    // scrolling, from the scroll handler: reading scrollHeight / scrollY here forced a layout
+    // every frame. The bar is written only when its value changes.
+    let last = ''
     const tick = () => {
-      const max = document.documentElement.scrollHeight - window.innerHeight
-      const p = max > 0 ? window.scrollY / max : 0
-      if (bar.current) bar.current.style.transform = `scaleX(${p.toFixed(4)})`
+      const scale = (getLenis()?.progress ?? scrollState.progress).toFixed(4)
+      if (scale === last || !bar.current) return
+      last = scale
+      bar.current.style.transform = `scaleX(${scale})`
     }
     gsap.ticker.add(tick)
     return () => gsap.ticker.remove(tick)

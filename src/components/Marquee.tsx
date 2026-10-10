@@ -7,6 +7,8 @@ import { scrollState } from '../state/scroll'
 /**
  * A band of the chapter's key quantities in its display face. It drifts, accelerates with
  * scroll speed and skews with scroll velocity. The items are computed by the model.
+ * Its width is measured only when it changes (ResizeObserver) and it rests while off-screen:
+ * reading scrollWidth every frame forced a layout per frame.
  */
 export function Marquee({ items, speed = 60 }: { items: string[]; speed?: number }) {
   const track = useRef<HTMLDivElement>(null)
@@ -17,9 +19,18 @@ export function Marquee({ items, speed = 60 }: { items: string[]; speed?: number
     if (!el || reduced || STILL) return
     let x = 0
     let skew = 0
+    let half = 0
+    let onScreen = true
+    const ro = new ResizeObserver(() => {
+      half = el.scrollWidth / 2
+    })
+    ro.observe(el)
+    const io = new IntersectionObserver((entries) => {
+      onScreen = entries[entries.length - 1].isIntersecting
+    })
+    io.observe(el.parentElement ?? el)
     const tick = (_t: number, dtMs: number) => {
-      const half = el.scrollWidth / 2
-      if (half <= 0) return
+      if (!onScreen || half <= 0) return
       const v = scrollState.velocity
       x -= ((speed + Math.min(Math.abs(v) * 0.25, 900)) * dtMs) / 1000
       if (x <= -half) x += half
@@ -28,7 +39,11 @@ export function Marquee({ items, speed = 60 }: { items: string[]; speed?: number
       el.style.transform = `translate3d(${x.toFixed(2)}px,0,0) skewX(${skew.toFixed(2)}deg)`
     }
     gsap.ticker.add(tick)
-    return () => gsap.ticker.remove(tick)
+    return () => {
+      gsap.ticker.remove(tick)
+      ro.disconnect()
+      io.disconnect()
+    }
   }, [reduced, speed])
 
   const row = items.map((it, i) => (

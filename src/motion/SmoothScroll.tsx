@@ -16,11 +16,25 @@ export function SmoothScroll() {
 
   useEffect(() => {
     if (reduced) {
+      // page height cached on resize, so the scroll handler never reads layout
+      let max = 1
+      const measure = () => {
+        max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight)
+      }
+      const ro = new ResizeObserver(measure)
+      ro.observe(document.body)
+      measure()
       const onScroll = () => {
         scrollState.velocity = ScrollTrigger.getAll()[0]?.getVelocity() ?? 0
+        scrollState.progress = Math.min(1, Math.max(0, window.scrollY / max))
       }
       window.addEventListener('scroll', onScroll, { passive: true })
-      return () => window.removeEventListener('scroll', onScroll)
+      window.addEventListener('resize', measure)
+      return () => {
+        window.removeEventListener('scroll', onScroll)
+        window.removeEventListener('resize', measure)
+        ro.disconnect()
+      }
     }
     const lenis = new Lenis({ lerp: 0.085, smoothWheel: true, wheelMultiplier: 0.9, touchMultiplier: 1.2 })
     // Lenis rewrites every lenis-* class on <html> each time its scrolling state flips (removes
@@ -38,6 +52,7 @@ export function SmoothScroll() {
     lenis.on('scroll', ScrollTrigger.update)
     lenis.on('scroll', (l: Lenis) => {
       scrollState.velocity = l.velocity * 60
+      scrollState.progress = l.progress
     })
     const raf = (time: number) => lenis.raf(time * 1000)
     gsap.ticker.add(raf)
