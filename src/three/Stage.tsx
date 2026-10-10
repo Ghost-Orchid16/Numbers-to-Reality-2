@@ -3,6 +3,7 @@ import { Canvas, useThree } from '@react-three/fiber'
 import { Suspense, useEffect } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { WORLDS } from '../design/worlds'
+import { isLoaded } from '../lib/loading'
 import { onFrame } from '../motion/frame'
 import { gsap } from '../motion/gsap'
 import { SCENES } from '../scenes/registry'
@@ -58,7 +59,14 @@ function FrameDriver() {
   useEffect(() => {
     // R3F derives delta from the previous timestamp: start from the ticker's current time
     clock.elapsedTime = gsap.ticker.time
-    return onFrame('render', (time) => advance(time))
+    let warm = 0
+    return onFrame('render', (time) => {
+      // Behind the opaque loader nothing can be seen once the shaders are built: a few more
+      // frames build the post-processing passes, then the canvas waits for the reveal (the
+      // loader's own animation gets the main thread and the GPU).
+      if (!useDirector.getState().ready && isLoaded('gpu:compile') && warm++ >= 3) return
+      advance(time)
+    })
   }, [advance, clock])
   return null
 }

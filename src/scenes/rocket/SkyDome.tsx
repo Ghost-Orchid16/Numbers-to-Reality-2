@@ -9,7 +9,12 @@ import { SKY_GLSL, SUN_DIR } from './skyChunk'
 
 const INK = new Color('#05060A').convertSRGBToLinear()
 
-/** Sky dome that follows the camera; drawn first, without depth, behind everything. */
+/**
+ * Sky dome that follows the camera, behind everything. It is drawn after the opaque geometry, at
+ * the far plane with a depth test (renderOrder 1: after the opaques, before the trajectory lines,
+ * which write no depth) so the GPU skips every pixel the ground and the rocket already cover —
+ * the same image as drawing it first, without shading what is hidden.
+ */
 export function SkyDome() {
   const mesh = useRef<Mesh>(null)
   const geometry = useDisposable(() => new SphereGeometry(1, 64, 40), [])
@@ -21,6 +26,7 @@ export function SkyDome() {
           void main() {
             vDir = (modelMatrix * vec4(position, 0.0)).xyz;
             gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);
+            gl_Position.z = gl_Position.w; // on the far plane: behind every opaque pixel
           }`,
         fragmentShader: /* glsl */ `
           ${SKY_GLSL}
@@ -60,7 +66,6 @@ export function SkyDome() {
         },
         side: BackSide,
         depthWrite: false,
-        depthTest: false,
       }),
     [],
   )
@@ -80,7 +85,11 @@ export function SkyDome() {
     u.uStars.value = 0.09 + 0.91 * smoothstep(8000, 70000, camAlt)
     u.uPresence.value = frame.handoff.presence
     u.uTime.value += ambientDt(dt)
+    // At presence 0 (the hero before the dusk fades in) the sky outputs exactly uInk: clear to
+    // that value instead of shading the whole screen to it.
+    m.visible = frame.handoff.presence > 0
+    if (!m.visible) state.gl.setClearColor(INK, 1)
   })
 
-  return <mesh ref={mesh} geometry={geometry} material={material} renderOrder={-100} frustumCulled={false} />
+  return <mesh ref={mesh} geometry={geometry} material={material} renderOrder={1} frustumCulled={false} />
 }

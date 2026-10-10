@@ -1,6 +1,6 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { easing } from 'maath'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AdditiveBlending,
   Color,
@@ -214,6 +214,7 @@ function GlyphField() {
   }, [geometry, material, mark])
   useEffect(() => () => mark('intro', false), [mark])
 
+  const mesh = useRef<Mesh>(null)
   useFrame((_s, dt) => {
     if (!material) return
     const ph = introPhases(scrollState.intro.progress)
@@ -221,10 +222,13 @@ function GlyphField() {
     material.uniforms.uAssemble.value = ph.assemble
     material.uniforms.uReveal.value = ph.reveal
     material.uniforms.uDrift.value = reduced ? 0 : 1
+    // From reveal ≈ 0.991 every glyph has dissolved into the hull (vAlpha = 0, all fragments
+    // discarded): through the whole rocket chapter the 13,000 quads need not be drawn at all.
+    if (mesh.current) mesh.current.visible = ph.reveal < 0.995
   })
 
   if (!geometry || !material) return null
-  return <mesh geometry={geometry} material={material} frustumCulled={false} renderOrder={10} />
+  return <mesh ref={mesh} geometry={geometry} material={material} frustumCulled={false} renderOrder={10} />
 }
 
 /** Hero camera: from the glyph field down to the launch-pad shot where Chapter 01 begins. */

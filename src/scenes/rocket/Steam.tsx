@@ -1,5 +1,5 @@
 import { useFrame } from '@react-three/fiber'
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import {
   CanvasTexture,
   Color,
@@ -8,6 +8,7 @@ import {
   PlaneGeometry,
   ShaderMaterial,
   Vector3,
+  type Mesh,
 } from 'three'
 import { smoothstep } from '../../sim/core/math'
 import { ambientDt } from '../../perf/still'
@@ -202,6 +203,9 @@ export function Steam() {
   const steamMat = useDisposable(() => makeMat(false), [puff, nozzle])
   const ventMat = useDisposable(() => makeMat(true), [puff, nozzle])
 
+  const steamMesh = useRef<Mesh>(null)
+  const ventMesh = useRef<Mesh>(null)
+
   useFrame((_s, dt) => {
     const firing = frame.firing
     nozzle.copy(frame.axis).multiplyScalar(-1.75).add(frame.pos)
@@ -216,12 +220,15 @@ export function Steam() {
     // vent vapour only while the cold rocket waits on the pad
     v.uPresence.value = frame.onPad && !firing ? frame.handoff.presence : Math.max(0, v.uPresence.value - dt * 1.5)
     v.uGlow.value = 0
+    // at zero presence every fragment is discarded: skip the draws
+    if (steamMesh.current) steamMesh.current.visible = u.uPresence.value > 0
+    if (ventMesh.current) ventMesh.current.visible = v.uPresence.value > 0
   })
 
   return (
     <>
-      <mesh geometry={steamGeo} material={steamMat} frustumCulled={false} renderOrder={4} />
-      <mesh geometry={ventGeo} material={ventMat} frustumCulled={false} renderOrder={4} />
+      <mesh ref={steamMesh} geometry={steamGeo} material={steamMat} frustumCulled={false} renderOrder={4} />
+      <mesh ref={ventMesh} geometry={ventGeo} material={ventMat} frustumCulled={false} renderOrder={4} />
     </>
   )
 }
