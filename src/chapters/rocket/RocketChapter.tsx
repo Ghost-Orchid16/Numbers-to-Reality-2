@@ -172,10 +172,11 @@ export default function RocketChapter() {
           rocketScroll.reading = false
         },
       })
-      // colour wash hides the camera cut between the scrubbed flight and the live lab
+      // colour wash hides the camera cut between the scrubbed flight and the live lab; it peaks
+      // exactly at the cut (lab top at 70 %), so it follows the scroll with no lag of its own
       const wash = root.current!.querySelector<HTMLElement>('.wash')!
       gsap
-        .timeline({ scrollTrigger: { trigger: lab, start: 'top bottom', end: 'top 40%', scrub: reduced ? true : 0.6 } })
+        .timeline({ scrollTrigger: { trigger: lab, start: 'top bottom', end: 'top 40%', scrub: true } })
         .fromTo(wash, { opacity: 0 }, { opacity: 1, ease: 'power1.in', duration: 1 })
         .to(wash, { opacity: 0, ease: 'power1.out', duration: 1 })
     },

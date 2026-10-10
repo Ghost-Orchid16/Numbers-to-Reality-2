@@ -230,7 +230,9 @@ export function FlightSequence() {
           start: 'top top',
           end: `+=${length}%`,
           pin: true,
-          scrub: 1,
+          // the Lenis-smoothed scroll position drives simulated time directly: a numeric scrub
+          // stacked a second ~1 s catch-up on top of Lenis (same scroll → time mapping at rest)
+          scrub: true,
           onEnter: enter,
           onEnterBack: enter,
           onLeaveBack: back,

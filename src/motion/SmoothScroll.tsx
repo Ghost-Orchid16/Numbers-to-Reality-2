@@ -36,7 +36,10 @@ export function SmoothScroll() {
         ro.disconnect()
       }
     }
-    const lenis = new Lenis({ lerp: 0.085, smoothWheel: true, wheelMultiplier: 0.9, touchMultiplier: 1.2 })
+    // Touch keeps the browser's own scrolling and momentum (syncTouch off, the Lenis default,
+    // stated here so it stays off). Scrubbed tweens use `scrub: true`: this smoothing is the
+    // only one between the wheel and the page.
+    const lenis = new Lenis({ lerp: 0.085, smoothWheel: true, syncTouch: false, wheelMultiplier: 0.9, touchMultiplier: 1.2 })
     // Lenis rewrites every lenis-* class on <html> each time its scrolling state flips (removes
     // them all, adds them back). Every rewrite invalidated the whole document's style — a
     // ~2,000-element recalc at the start and end of each scroll gesture, measured at 10–30 ms.

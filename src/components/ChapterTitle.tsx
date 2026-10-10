@@ -53,17 +53,18 @@ export function ChapterTitle({
         stagger: 0.08,
         scrollTrigger: { trigger: el, start: 'top 68%' },
       })
-      // outline → filled with the chapter colour, scrubbed with scroll
+      // outline → filled with the chapter colour, scrubbed with scroll (the Lenis-smoothed
+      // position directly: no second catch-up lag)
       gsap.fromTo(
         num,
         { '--fill': '0%' },
-        { '--fill': '100%', ease: 'none', scrollTrigger: { trigger: el, start: 'top 85%', end: 'center 40%', scrub: 1 } },
+        { '--fill': '100%', ease: 'none', scrollTrigger: { trigger: el, start: 'top 85%', end: 'center 40%', scrub: true } },
       )
       // parallax: the numeral drifts slower than the page
       gsap.fromTo(
         num,
         { yPercent: 12 },
-        { yPercent: -10, ease: 'none', scrollTrigger: { trigger: el, start: 'top bottom', end: 'bottom top', scrub: 1 } },
+        { yPercent: -10, ease: 'none', scrollTrigger: { trigger: el, start: 'top bottom', end: 'bottom top', scrub: true } },
       )
       return () => split.revert()
     },
