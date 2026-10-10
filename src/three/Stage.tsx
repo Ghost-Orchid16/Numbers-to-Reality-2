@@ -1,16 +1,18 @@
 import { AdaptiveDpr, PerformanceMonitor } from '@react-three/drei'
 import { Canvas, useThree } from '@react-three/fiber'
-import { Suspense, useEffect } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { WORLDS } from '../design/worlds'
 import { isLoaded } from '../lib/loading'
 import { onFrame } from '../motion/frame'
 import { gsap } from '../motion/gsap'
+import { getLenis } from '../motion/scroll'
 import { SCENES } from '../scenes/registry'
 import { ADAPTIVE_QUALITY, FLAGS } from '../perf/flags'
 import { registerRenderer } from '../perf/probe'
 import { mountedChapters, useDirector, type Quality } from '../state/director'
 import { usePrefs } from '../state/prefs'
+import { scrollState } from '../state/scroll'
 import { Effects } from './Effects'
 import { Precompile } from './Precompile'
 
@@ -34,6 +36,46 @@ function SceneRouter() {
         ) : null
       })}
     </>
+  )
+}
+
+/**
+ * Adaptive quality, judged only on frames the visitor sees: the monitor starts 1.5 s after the
+ * loader's reveal (start-up frames compile shaders and would read as a slow machine), and a tier
+ * change waits until scrolling stops — a change rebuilds glyphs, particles and passes, which is a
+ * hitch mid-scroll but invisible at rest.
+ */
+function AdaptiveQuality() {
+  const ready = useDirector((s) => s.ready)
+  const setQuality = useDirector((s) => s.setQuality)
+  const [live, setLive] = useState(false)
+  const pending = useRef<Quality | null>(null)
+  useEffect(() => {
+    if (!ready) return
+    const t = setTimeout(() => setLive(true), 1500)
+    return () => clearTimeout(t)
+  }, [ready])
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (pending.current && !getLenis()?.isScrolling && Math.abs(scrollState.velocity) < 1) {
+        setQuality(pending.current)
+        pending.current = null
+      }
+    }, 250)
+    return () => clearInterval(id)
+  }, [setQuality])
+  if (!live) return null
+  const request = (q: Quality) => {
+    pending.current = q
+  }
+  const current = () => pending.current ?? useDirector.getState().quality
+  return (
+    <PerformanceMonitor
+      flipflops={4}
+      onDecline={() => request(DOWN[current()])}
+      onIncline={() => request(UP[current()])}
+      onFallback={() => request('low')}
+    />
   )
 }
 
@@ -78,7 +120,6 @@ function FrameDriver() {
  */
 export default function Stage() {
   const quality = useDirector((s) => s.quality)
-  const setQuality = useDirector((s) => s.setQuality)
   const compact = usePrefs((s) => s.compact)
   const dprMax = compact ? 1.5 : 2
   const dpr: [number, number] = FLAGS.dpr
@@ -105,14 +146,7 @@ export default function Stage() {
           if (FLAGS.qa) (window as unknown as { __nrQA: unknown }).__nrQA = { gl }
         }}
       >
-        {ADAPTIVE_QUALITY && (
-          <PerformanceMonitor
-            flipflops={4}
-            onDecline={() => setQuality(DOWN[useDirector.getState().quality])}
-            onIncline={() => setQuality(UP[useDirector.getState().quality])}
-            onFallback={() => setQuality('low')}
-          />
-        )}
+        {ADAPTIVE_QUALITY && <AdaptiveQuality />}
         <AdaptiveDpr />
         <FrameDriver />
         <ClearColor />
