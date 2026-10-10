@@ -1,4 +1,5 @@
 import { useEffect, useRef, type CSSProperties } from 'react'
+import { setText } from '../lib/dom'
 import { onReadout } from '../lib/ticker'
 
 /**
@@ -9,16 +10,7 @@ export function Live({ read, varKey, className = '' }: { read: () => string; var
   const ref = useRef<HTMLSpanElement>(null)
   const readRef = useRef(read)
   readRef.current = read
-  useEffect(
-    () =>
-      onReadout(() => {
-        const el = ref.current
-        if (!el) return
-        const next = readRef.current()
-        if (el.textContent !== next) el.textContent = next
-      }),
-    [],
-  )
+  useEffect(() => onReadout(() => setText(ref.current, readRef.current()), ref.current), [])
   return (
     <span
       ref={ref}

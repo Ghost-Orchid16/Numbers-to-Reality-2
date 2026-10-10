@@ -3,6 +3,7 @@ import { LabGroup, LabPanel } from '../../components/LabPanel'
 import { LiveMetric } from '../../components/LiveMetric'
 import { MagneticButton } from '../../components/MagneticButton'
 import { SegmentedControl, ToggleControl, VariableControl } from '../../components/VariableControl'
+import { setText } from '../../lib/dom'
 import { fmtFixed, fmtSig, joinQty, qty } from '../../lib/format'
 import { cv } from '../../lib/tex'
 import { onReadout } from '../../lib/ticker'
@@ -65,9 +66,9 @@ function Status() {
         const el = ref.current
         if (!el) return
         const s = statusLine()
-        if (el.textContent !== s.text) el.textContent = s.text
-        el.dataset.tone = s.tone
-      }),
+        setText(el, s.text)
+        if (el.dataset.tone !== s.tone) el.dataset.tone = s.tone
+      }, ref.current),
     [],
   )
   return <p ref={ref} className="lab-status data" role="status" aria-live="polite" />

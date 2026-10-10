@@ -1,5 +1,6 @@
 import { useProgress } from '@react-three/drei'
 import { useEffect, useRef, useState } from 'react'
+import { setText } from '../lib/dom'
 import { loadLabel } from '../lib/loading'
 import { gsap } from '../motion/gsap'
 import { useDirector } from '../state/director'
@@ -29,7 +30,7 @@ export function Loader() {
       const t = target.current
       shown.current = Math.min(t, shown.current + Math.max(0.35, (t - shown.current) * 0.12))
       const n = Math.floor(shown.current + 1e-6)
-      if (counter.current) counter.current.textContent = String(n).padStart(3, '0')
+      setText(counter.current, String(n).padStart(3, '0'))
       if (bar.current) bar.current.style.transform = `scaleX(${(shown.current / 100).toFixed(4)})`
     }
     gsap.ticker.add(tick)

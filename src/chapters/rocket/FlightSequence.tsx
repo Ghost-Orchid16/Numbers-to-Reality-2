@@ -3,6 +3,7 @@ import { EquationBlock } from '../../components/EquationBlock'
 import { Live } from '../../components/Live'
 import { LiveMetric } from '../../components/LiveMetric'
 import { ScrollNarrative, type NarrativeStep } from '../../components/ScrollNarrative'
+import { setText } from '../../lib/dom'
 import { cv } from '../../lib/tex'
 import { gsap, ScrollTrigger, useGSAP } from '../../motion/gsap'
 import { STILL, STILL_TIME } from '../../perf/still'
@@ -36,7 +37,7 @@ function Countdown() {
       }
       if (label !== last) {
         last = label
-        if (text.current) text.current.textContent = label
+        setText(text.current, label)
         wrap.current?.setAttribute('data-on', label ? 'true' : 'false')
         wrap.current?.setAttribute('data-kind', label.length > 2 ? 'word' : 'digit')
       }

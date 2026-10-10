@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from 'react'
+import { setText } from '../lib/dom'
 import { renderTex } from '../lib/tex'
 import { onReadout } from '../lib/ticker'
 
@@ -41,11 +42,9 @@ export function EquationBlock({
       for (const term of termsRef.current) {
         if (typeof term === 'string') continue
         const span = spans[i++]
-        if (!span) continue
-        const next = term.read()
-        if (span.textContent !== next) span.textContent = next
+        if (span) setText(span, term.read())
       }
-    })
+    }, line)
   }, [])
 
   const renderTerms = (terms: SubTerm[] | undefined) =>
