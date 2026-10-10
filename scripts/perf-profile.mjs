@@ -356,11 +356,37 @@ const style = {
   bigRecalcs: bigRecalcs.slice(0, 400),
   invalidations: [...inval.entries()].sort((a, b) => b[1] - a[1]).slice(0, 30).map(([k, n]) => `${n}× ${k}`),
 }
+// ── script over the whole scroll: self and inclusive time per function (CPU profile samples) ──
+const selfAll = new Map()
+const inclAll = new Map()
+for (let i = 0; i + 1 < samples.length; i++) {
+  const dt = (samples[i + 1].ts - samples[i].ts) / 1000
+  if (dt <= 0 || dt > 100) continue
+  const name = fnName(samples[i].id)
+  if (name.startsWith('(idle)')) continue
+  selfAll.set(name, (selfAll.get(name) ?? 0) + dt)
+  const seen = new Set()
+  for (let n = nodes.get(samples[i].id); n; n = nodes.get(n.parent)) {
+    const f = fnName(n.id)
+    if (seen.has(f)) continue
+    seen.add(f)
+    inclAll.set(f, (inclAll.get(f) ?? 0) + dt)
+  }
+}
+const ranked = (m, k) =>
+  [...m.entries()]
+    .filter(([n]) => !n.startsWith('(root)'))
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, k)
+    .map(([n, ms]) => `${ms.toFixed(0)} ms  ${n}`)
+const script = { self: ranked(selfAll, 30), inclusive: ranked(inclAll, 40) }
+
 const report = {
   meta: { date: new Date().toISOString(), viewport: `${vw}×${vh}`, step, passes, minMs, query },
   sections,
   style,
   hitches,
+  script,
   probeEvents,
 }
 await mkdir(`${root}perf`, { recursive: true })
@@ -376,4 +402,8 @@ console.log('recalcs of ≥200 elements, by cause:')
 for (const b of style.bigRecalcsByCause.slice(0, 12)) console.log(`    ${b.ms} ms · ${b.count}× · ${b.elements} el · ${b.cause}`)
 console.log('top invalidations:')
 for (const i of style.invalidations.slice(0, 15)) console.log(`    ${i}`)
+console.log('script self time, top 15:')
+for (const f of script.self.slice(0, 15)) console.log(`    ${f}`)
+console.log('script inclusive time, top 25:')
+for (const f of script.inclusive.slice(0, 25)) console.log(`    ${f}`)
 console.log(`\n${hitches.length} tasks ≥ ${minMs} ms · wrote ${out}`)
