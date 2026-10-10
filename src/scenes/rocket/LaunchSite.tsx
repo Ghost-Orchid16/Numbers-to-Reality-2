@@ -304,15 +304,19 @@ export function LaunchSite() {
     site.uReveal.value = frame.handoff.presence
     presence.value = frame.handoff.presence
     const g = group.current
-    if (g) g.visible = frame.handoff.presence > 0.001 && frame.altitude < 60000
+    const visible = frame.handoff.presence > 0.001 && frame.altitude < 60000
+    if (g) g.visible = visible
     // aviation beacons blink at 1 Hz
     if (beaconsRef.current) beaconsRef.current.visible = Math.sin(ambientTime(state.clock.elapsedTime) * Math.PI * 2) > -0.2
-    for (const s of spots.current) if (s) s.intensity = 2200 * frame.handoff.presence
+    // The floodlights stay in the scene with zero intensity while the site is hidden, instead of
+    // leaving with it: a constant light count keeps every lit material on one shader program,
+    // where a changing count recompiled them all mid-scroll. Zero intensity adds exactly nothing.
+    for (const s of spots.current) if (s) s.intensity = visible ? 2200 * frame.handoff.presence : 0
     // the lab's "to scale" layer: a 10 m grid on the apron while the rocket stands there
     if (grid.current) grid.current.visible = rocketScroll.section === 'lab' && frame.altitude < 400
   })
 
-  return (
+  const siteGroup = (
     <group ref={group} name="launch-site">
       <mesh geometry={geos.ground} material={mats.ground} receiveShadow />
       {/* flame trench running out both sides of the mount */}
@@ -332,20 +336,6 @@ export function LaunchSite() {
         <group key={i} position={p}>
           <mesh geometry={geos.pole} material={mats.paintedSteel} position={[0, 9, 0]} scale={[1, 18, 1]} />
           <mesh geometry={geos.lampHead} material={mats.lamp} position={[0, 18.4, 0]} lookAt={new Vector3(-p.x, 12, -p.z)} />
-          <primitive object={spotTargets[i]} position={[-p.x, 12 - GROUND_Y, -p.z]} />
-          <spotLight
-            ref={(el) => {
-              spots.current[i] = el
-            }}
-            position={[0, 18.2, 0]}
-            target={spotTargets[i]}
-            color="#E8F0FF"
-            angle={0.32}
-            penumbra={0.7}
-            decay={2}
-            distance={0}
-            intensity={0}
-          />
         </group>
       ))}
       <group ref={beaconsRef}>
@@ -371,5 +361,32 @@ export function LaunchSite() {
         <mesh geometry={geos.windows} material={mats.window} position={[0, -24, 47.6]} />
       </group>
     </group>
+  )
+
+  return (
+    <>
+      {siteGroup}
+      {/* the floodlights live outside the hideable site group (see the frame loop above) */}
+      <group name="launch-site-lights">
+        {floods.map((p, i) => (
+          <group key={i} position={p}>
+            <primitive object={spotTargets[i]} position={[-p.x, 12 - GROUND_Y, -p.z]} />
+            <spotLight
+              ref={(el) => {
+                spots.current[i] = el
+              }}
+              position={[0, 18.2, 0]}
+              target={spotTargets[i]}
+              color="#E8F0FF"
+              angle={0.32}
+              penumbra={0.7}
+              decay={2}
+              distance={0}
+              intensity={0}
+            />
+          </group>
+        ))}
+      </group>
+    </>
   )
 }

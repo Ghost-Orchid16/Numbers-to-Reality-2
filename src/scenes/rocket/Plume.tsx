@@ -119,8 +119,12 @@ export function Plume() {
     if (!g) return
     const on = frame.firing
     g.visible = on
-    if (light.current) light.current.visible = on
-    if (!on) return
+    // the light stays in the scene at zero intensity when the engine is off: a constant light
+    // count keeps every lit material on one shader program (no recompiles at ignition/MECO)
+    if (!on) {
+      if (light.current) light.current.intensity = 0
+      return
+    }
     const startup = smoothstep(0, 0.25, frame.ignitionAge)
     const vac = 1 - Math.pow(frame.ambient, 0.35)
     const k = ambientTime(state.clock.elapsedTime)
@@ -139,10 +143,12 @@ export function Plume() {
   })
 
   return (
-    <group ref={group} position={[0, RK.nozzleExitY, 0]} visible={false}>
-      <mesh geometry={geometry} material={outer} frustumCulled={false} renderOrder={5} />
-      <mesh geometry={geometry} material={inner} frustumCulled={false} renderOrder={6} scale={[0.62, 1, 0.62]} />
-      <pointLight ref={light} position={[0, -3, 0]} color="#FF8B42" distance={0} decay={2} intensity={0} />
-    </group>
+    <>
+      <group ref={group} position={[0, RK.nozzleExitY, 0]} visible={false}>
+        <mesh geometry={geometry} material={outer} frustumCulled={false} renderOrder={5} />
+        <mesh geometry={geometry} material={inner} frustumCulled={false} renderOrder={6} scale={[0.62, 1, 0.62]} />
+      </group>
+      <pointLight ref={light} position={[0, RK.nozzleExitY - 3, 0]} color="#FF8B42" distance={0} decay={2} intensity={0} />
+    </>
   )
 }

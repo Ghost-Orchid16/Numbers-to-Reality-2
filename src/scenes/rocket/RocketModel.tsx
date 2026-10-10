@@ -31,6 +31,7 @@ const PART_MATERIAL: Record<RocketPart, MatKey> = {
  */
 export function RocketModel() {
   const group = useRef<Group>(null)
+  const body = useRef<Group>(null)
   const nozzleGlow = useRef<Mesh>(null)
 
   const geos = useDisposable(buildRocketParts, [])
@@ -102,7 +103,10 @@ export function RocketModel() {
     if (!g) return
     g.rotation.set(0, 0, -frame.pitch)
     dissolve.uReveal.value = frame.handoff.reveal
-    g.visible = frame.handoff.reveal > 0.001
+    // only the hull hides before the reveal; the group (and the plume's light) stays in the scene
+    // so the light count never changes. The plume and the throat glow only show while the engine
+    // fires, which never happens before the reveal.
+    if (body.current) body.current.visible = frame.handoff.reveal > 0.001
     const metal = mats.metal
     // nozzle interior lit by its own exhaust
     metal.emissiveIntensity = frame.firing ? 0.35 + 0.25 * frame.thrustFrac : 0
@@ -111,7 +115,7 @@ export function RocketModel() {
 
   return (
     <group ref={group} name="rocket">
-      <group rotation-y={ROCKET_YAW}>
+      <group ref={body} rotation-y={ROCKET_YAW}>
         {(Object.keys(PART_MATERIAL) as RocketPart[]).map((k) => (
           <mesh key={k} geometry={geos[k]} material={mats[PART_MATERIAL[k]]} castShadow receiveShadow />
         ))}

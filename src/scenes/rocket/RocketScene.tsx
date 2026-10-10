@@ -70,8 +70,6 @@ function ScreenLinks() {
 function Lighting() {
   const sun = useRef<DirectionalLight>(null)
   const hemi = useRef<HemisphereLight>(null)
-  const quality = useDirector((s) => s.quality)
-  const shadows = quality !== 'low'
   useFrame(() => {
     const s = sun.current
     if (!s || !hemi.current) return
@@ -80,26 +78,17 @@ function Lighting() {
     const space = smoothstep(0, 0.12, dip)
     s.color.copy(SUN_DUSK).lerp(SUN_SPACE, space)
     s.intensity = 1.5 + 2.2 * space
-    s.castShadow = shadows && frame.altitude < 400
     hemi.current.intensity = (0.42 + 0.18 * frame.ambient) * frame.handoff.presence + 0.12
   })
   return (
     <>
+      {/* No shadow maps are rendered (the canvas has no `shadows`), so the sun never casts:
+          toggling castShadow only changed every lit material's shader key and recompiled it. */}
       <directionalLight
         ref={sun}
         position={[SUN_DIR.x * 200, SUN_DIR.y * 200 + 30, SUN_DIR.z * 200]}
         intensity={1.5}
         color={SUN_DUSK}
-        castShadow={shadows}
-        shadow-mapSize={[2048, 2048]}
-        shadow-bias={-0.0004}
-        shadow-normalBias={0.03}
-        shadow-camera-left={-60}
-        shadow-camera-right={60}
-        shadow-camera-top={60}
-        shadow-camera-bottom={-60}
-        shadow-camera-near={10}
-        shadow-camera-far={500}
       />
       <hemisphereLight ref={hemi} args={['#2E4584', '#140F0B', 0.6]} />
     </>
