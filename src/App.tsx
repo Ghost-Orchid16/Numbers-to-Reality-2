@@ -6,6 +6,8 @@ import { Cursor } from './components/Cursor'
 import { GrainOverlay } from './components/GrainOverlay'
 import { Loader } from './components/Loader'
 import { ScrollHUD } from './components/ScrollHUD'
+import { CHAPTERS } from './content/chapters'
+import { prefetchWorldFont } from './design/fonts'
 import { trackLoad } from './lib/loading'
 import { ScrollTrigger } from './motion/gsap'
 import { scrollToTarget } from './motion/scroll'
@@ -46,9 +48,26 @@ function useHashOnReady() {
   }, [ready])
 }
 
+/** After the reveal, each chapter's display face is fetched while the chapter before it is active. */
+function useFontPrefetch() {
+  useEffect(() => {
+    const built = CHAPTERS.filter((c) => c.built)
+    const ahead = (id: string) => {
+      const next = built[built.findIndex((c) => c.id === id) + 1]
+      if (next) prefetchWorldFont(next.id)
+    }
+    const { ready, active } = useDirector.getState()
+    if (ready) ahead(active)
+    return useDirector.subscribe((s, prev) => {
+      if (s.ready && (!prev.ready || s.active !== prev.active)) ahead(s.active)
+    })
+  }, [])
+}
+
 export default function App() {
   useScrollRefresh()
   useHashOnReady()
+  useFontPrefetch()
   return (
     <>
       <a href="#rocket" className="skip-link interactive">

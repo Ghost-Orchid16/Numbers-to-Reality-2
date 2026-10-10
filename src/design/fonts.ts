@@ -60,3 +60,14 @@ export function ensureWorldFont(id: WorldId): Promise<void> {
 }
 
 export const isWorldFontRequested = (id: WorldId): boolean => pending.has(id)
+
+/**
+ * Fetch a world's face one chapter ahead, when the main thread is idle: registering the face and
+ * swapping it in then happen while that chapter is still far off-screen, not as it scrolls in.
+ */
+export function prefetchWorldFont(id: WorldId): void {
+  if (!CHAPTER_FACES[id] || pending.has(id)) return
+  const run = () => void ensureWorldFont(id)
+  if (typeof requestIdleCallback === 'function') requestIdleCallback(run, { timeout: 4000 })
+  else setTimeout(run, 1000)
+}
