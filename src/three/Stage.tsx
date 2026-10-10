@@ -79,6 +79,48 @@ function AdaptiveQuality() {
   )
 }
 
+/**
+ * Safety net for machines that cannot hold ~55 fps: while the page scrolls fast, the canvas
+ * renders at 70 % of its pixel ratio, and the full ratio returns once the scroll has settled.
+ * Machines that keep up are never touched — frame time is measured only at full resolution — and
+ * nothing is removed: the same objects and effects, fewer pixels, for the length of a gesture.
+ * (Each switch resizes the canvas and the post buffers once; both happen at gesture edges.)
+ */
+const SCROLL_DPR_SCALE = 0.7
+const FAST_SCROLL = 900 // px/s
+const STRUGGLING_MS = 1000 / 55
+
+function ScrollResolution({ min, max }: { min: number; max: number }) {
+  const setDpr = useThree((s) => s.setDpr)
+  useEffect(() => {
+    const base = Math.min(Math.max(min, window.devicePixelRatio), max)
+    let ema = 1000 / 60
+    let samples = 0
+    let lowered = false
+    let calm = 0
+    return onFrame('post', (_t, dt) => {
+      if (!useDirector.getState().ready) return
+      const ms = Math.min(dt * 1000, 100)
+      if (!lowered) {
+        ema += (ms - ema) * 0.05
+        // the first frames after the reveal are not a verdict on the machine
+        if (++samples > 90 && ema > STRUGGLING_MS && Math.abs(scrollState.velocity) > FAST_SCROLL) {
+          lowered = true
+          calm = 0
+          setDpr(base * SCROLL_DPR_SCALE)
+        }
+        return
+      }
+      if (getLenis()?.isScrolling || Math.abs(scrollState.velocity) > 1) calm = 0
+      else if ((calm += ms) > 250) {
+        lowered = false
+        setDpr(base)
+      }
+    })
+  }, [min, max, setDpr])
+  return null
+}
+
 /** Canvas clear colour follows the active world. */
 function ClearColor() {
   const gl = useThree((s) => s.gl)
@@ -115,8 +157,9 @@ function FrameDriver() {
 
 /**
  * THE STAGE — one persistent full-viewport WebGL canvas fixed behind the DOM.
- * Adaptive quality: PerformanceMonitor moves a tier (DPR range, particle counts, AO);
- * AdaptiveDpr handles transient regressions. DPR ∈ [1, 2] desktop, [1, 1.5] compact.
+ * Adaptive quality: PerformanceMonitor moves a tier (DPR range, particle counts, AO) at rest;
+ * ScrollResolution lowers the pixel ratio during fast scrolls on machines that cannot keep up;
+ * AdaptiveDpr serves `performance.regress()` callers. DPR ∈ [1, 2] desktop, [1, 1.5] compact.
  */
 export default function Stage() {
   const quality = useDirector((s) => s.quality)
@@ -147,6 +190,7 @@ export default function Stage() {
         }}
       >
         {ADAPTIVE_QUALITY && <AdaptiveQuality />}
+        {ADAPTIVE_QUALITY && <ScrollResolution min={dpr[0]} max={dpr[1]} />}
         <AdaptiveDpr />
         <FrameDriver />
         <ClearColor />
