@@ -26,13 +26,15 @@ src/
                       math helpers, planet constants
     rocket/           model.ts (gravity-turn ODEs), rocketSim.ts (live sim, exact liftoff/burnout events),
                       trajectory.ts (precompute + sampling + max-Q refinement), rocket.test.ts
-  lib/                format.ts (SI units, sig figs, Intl), ticker.ts (12 Hz readout bus), loading.ts
-                      (honest loader items), tex.ts (KaTeX + colour classes), color.ts, useModelValue.ts
+  lib/                format.ts (SI units, sig figs, cached Intl), ticker.ts (12 Hz readout bus, idle
+                      off-screen), dom.ts (setText: rewrite a text node in place), loading.ts (honest
+                      loader items), tex.ts (KaTeX + colour classes), color.ts, useModelValue.ts
   design/             worlds.ts (9 token sets + maths-variable colours, AA-tested), fonts.ts (lazy faces),
                       tokens.ts (GSAP morph of :root tokens)
   state/              director.ts (active chapter, neighbour, quality), prefs.ts (reduced motion, pointer,
                       compact), scroll.ts (transient scroll state), anchors.ts (3D → screen points)
-  motion/             gsap.ts (plugins), SmoothScroll.tsx (Lenis ⇄ ScrollTrigger), scroll.ts (scrollTo)
+  motion/             frame.ts (THE frame loop: one GSAP-ticker rAF with ordered stages), gsap.ts (plugins),
+                      SmoothScroll.tsx (Lenis ⇄ ScrollTrigger), scroll.ts (scrollTo)
   components/         the shared DOM kit (ChapterWorld, ChapterTitle, ScrollNarrative, LabPanel, LiveMetric,
                       Live, VariableControl/Toggle/Segmented, EquationBlock, RealityCheck, Annotation,
                       Tooltip, Marquee, MagneticButton, ChapterNav, ScrollHUD, Loader, Cursor,
@@ -43,8 +45,21 @@ src/
   chapters/           one lazy chunk per chapter's DOM: intro/, rocket/ (+ runtime.ts shared with the scene)
   styles/             index.css (tokens, type scale, grid), chrome.css, components.css,
                       font-fallbacks.css (generated)
-scripts/              font-fallbacks.mjs (Capsize), qa-shots.mjs (Playwright QA)
+  perf/               diagnostics, loaded only behind URL flags: ?perf overlay, ?bench, ?still (qa
+                      builds), ?quality/?dpr pins, the frame probe (see docs/PERF.md)
+scripts/              font-fallbacks.mjs (Capsize), qa-shots.mjs (Playwright QA), bench.mjs,
+                      perf-profile.mjs, perf-gpu.mjs, still-shots.mjs, still-diff.mjs (docs/PERF.md)
+perf/                 benchmark results (JSON); screenshot sets are generated, not committed
 ```
+
+## One clock
+
+`motion/frame.ts` is the only frame loop: GSAP's ticker owns the one `requestAnimationFrame`, and
+every frame runs, in order, Lenis (prioritised listener; it also runs `ScrollTrigger.update`) → GSAP's
+root timeline (tweens and scrubs) → `onFrame('sim')` (simulation clocks) → `onFrame('dom')` (narrative,
+HUD, marquee, readout bus) → `onFrame('render')` (the canvas: `frameloop="never"` + `advance`) →
+`onFrame('post')` (DOM labels that follow this frame's 3D projection). Nothing else may call
+`requestAnimationFrame` or `setInterval` for animation. Hidden tabs stop it all.
 
 ## The one canvas
 
@@ -61,9 +76,17 @@ scripts/              font-fallbacks.mjs (Capsize), qa-shots.mjs (Playwright QA)
   heat haze (rocket only), AgX tone mapping, SMAA, vignette; N8AO only on the desktop high tier.
   `@react-three/postprocessing` disables renderer tone mapping, so AgX is an explicit effect.
 - Adaptive quality: `PerformanceMonitor` moves a `high | medium | low` tier (DPR range, glyph and particle
-  counts, AO, shadows, haze); `AdaptiveDpr` handles transient drops; rendering stops while the tab is hidden.
-- Shaders are precompiled under the loader (`Precompile`): every object made visible, then
-  `compileAsync` when `KHR_parallel_shader_compile` exists, else `compile`.
+  counts, AO, haze). It starts 1.5 s after the reveal and a tier change waits until the scroll is at rest
+  (it rebuilds glyphs, particles and passes). On machines that cannot hold ~55 fps, `ScrollResolution`
+  renders fast scrolls at 70 % of the pixel ratio and restores it when the scroll settles. `AdaptiveDpr`
+  serves `performance.regress()` callers. Rendering stops while the tab is hidden.
+- No shadow maps are rendered (the canvas has no `shadows`); lights never enter or leave the scene and
+  `castShadow` never flips — either would change every lit material's program key and recompile it.
+  Lights that should be off get intensity 0 (exactly no contribution).
+- Shaders are precompiled under the loader (`Precompile`) into a half-float target — the colour space
+  every frame is drawn in, which is part of three.js's program cache key — with every object made
+  visible, then every texture and vertex buffer is uploaded by one off-screen render: nothing compiles
+  or uploads while scrolling (`npm run bench` fails if pass 2 creates any program, texture or geometry).
 
 ## Hero → Chapter 01 handoff
 
@@ -77,8 +100,10 @@ camera ends on `POSE_PAD`, the rocket chapter's opening shot.
 
 - **Floating origin over a curved planet.** The rocket stays at the render origin; the launch site moves
   by `−position`, where position = ((R+h)·sin(x/R), (R+h)·cos(x/R) − R). Float32 holds at 600 km.
-- **Planet as a background layer** drawn first without depth, scaled down about the camera (same angular
-  size and horizon) because a 6,371 km sphere next to a 32 m rocket defeats any depth buffer.
+- **Planet as a background layer** scaled down about the camera (same angular size and horizon) because a
+  6,371 km sphere next to a 32 m rocket defeats any depth buffer. The sky and the planet are projected
+  onto the far plane (`gl_Position.z = w`) and drawn after the opaque scene with a depth test, so they
+  are shaded only where nothing is in front of them; hidden layers are not drawn at all.
 - **One sky model** (`skyChunk.ts`): `skyColorLocal(dir, up, altitude, dip)` gives dusk → indigo → black
   with a thin limb; the sea reflects the sky *at the reflection point* (its own vertical and sun elevation).
 - Plume: fake-volumetric GLSL with Mach diamonds that fade and a plume that balloons as ρ(h) falls.

@@ -31,15 +31,19 @@ offline after install.
 | `npm run bench` | (after `npm run build`) headless scroll benchmark → `perf/baseline.json` (or `--out=`): main-thread time per frame, long animation frames, GPU programs/textures/geometries created on the second pass, React commits, ScrollTrigger refreshes. See `docs/PERF.md` |
 | `npm run perf:shots` / `perf:diff` | deterministic `?still` screenshots (1920×1080, 1440×900, 390×844) into `perf/<set>/`, and their pixelmatch comparison with side-by-sides in `perf/diff/` |
 | `npm run perf:profile` / `perf:gpu` | what each long frame is made of (trace + CPU profile, `perf/profile.json`); GPU cost per scene component (`perf/gpu.json`) |
+| `npm run perf:css` | (after `npm run build`) compositing cost of the CSS effects (grain blend, vignette, backdrop blur, SVG filter) at rest and while scrolling |
 
 ## Diagnostics in the browser
 
 - `?perf` — live overlay: fps, frame-time p50/p95/p99, worst frame of the last 5 s, JS and main-thread ms per
   frame, draw calls, `renderer.info`, DPR, render tier, chapter, long animation frames, React commits.
 - `?bench` — scrolls the page top → bottom → top twice through Lenis and shows a results card with a
-  **Copy results** button (`&speed=` px/s, default 1500; `&quality=high|medium|low` pins the render tier).
+  **Copy results** button (`&speed=` px/s, default 1500; `&quality=high|medium|low` pins the render tier;
+  `&passes=` 1–4). Leave the tab in front and the mouse still while it runs.
+- `?quality=high|medium|low`, `?dpr=` — pin the render tier / pixel ratio (adaptive quality off).
 
-Both are lazy chunks: a normal visit downloads and runs none of it.
+Both are lazy chunks: a normal visit downloads and runs none of it. Performance rules, budget and
+measurements: [`docs/PERF.md`](docs/PERF.md).
 
 ## Deploy (static)
 

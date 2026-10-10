@@ -19,7 +19,8 @@
     "perf:diff": "node scripts/still-diff.mjs",
     "perf:profile": "node --max-old-space-size=6144 scripts/perf-profile.mjs",
     "perf:gpu": "node scripts/perf-gpu.mjs",
-    "check": "npm run typecheck && npm run lint && npm test && npm run build"
+    "check": "npm run typecheck && npm run lint && npm test && npm run build",
+    "perf:css": "node scripts/perf-css.mjs"
   },
   "dependencies": {
     "@fontsource-variable/archivo": "^5.3.0",

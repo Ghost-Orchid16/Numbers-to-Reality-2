@@ -13,8 +13,8 @@ node_modules/.tmp
 qa/
 # full-resolution ?still screenshots (regenerate with npm run perf:shots); the reviewed
 # side-by-sides and reports in perf/diff/ and the bench JSON files are committed
-perf/before/
-perf/after/
+perf/before*/
+perf/after*/
 perf/_*
 
 # logs
