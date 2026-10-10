@@ -1,4 +1,4 @@
-import { ScrollTrigger } from '../motion/gsap'
+import { gsap, ScrollTrigger } from '../motion/gsap'
 import { useDirector } from '../state/director'
 import { logEvent, percentile, probe, recentFrames } from './probe'
 import { measureSections, sectionAt, type SectionSpan } from './sections'
@@ -16,6 +16,10 @@ let hooked = false
 export function installPerfHooks(): void {
   if (hooked) return
   hooked = true
+  // GSAP keeps the requestAnimationFrame it found when its ticker first woke, which can be
+  // before the probe wrapped it: re-wake so GSAP's frames (and everything they drive) are timed
+  gsap.ticker.sleep()
+  gsap.ticker.wake()
   ScrollTrigger.addEventListener('refreshInit', () => {
     refreshStart = performance.now()
   })
