@@ -47,7 +47,7 @@ const POS = {
   lab: () => document.querySelector('#rocket-lab').getBoundingClientRect().top + scrollY,
 }
 const measure = (mode) => page.evaluate(async (mode) => {
-  const N = 120, dts = []
+  const N = 90, dts = []
   let last = performance.now()
   const y0 = scrollY
   for (let i = 0; i < N; i++) {
@@ -60,19 +60,32 @@ const measure = (mode) => page.evaluate(async (mode) => {
   return { p50: dts[N >> 1], mean: dts.reduce((a, b) => a + b, 0) / N }
 }, mode)
 
+// A warm-up measurement first (it absorbs one-off work after the scroll), then three rounds with
+// the variants in rotating order; each cell is the median of its three rounds (frame p50, ms).
+const ROUNDS = 3
+const names = Object.keys(VARIANTS)
 const out = {}
+const median = (a) => [...a].sort((x, y) => x - y)[a.length >> 1]
 for (const [pos, fn] of Object.entries(POS)) {
   const y = await page.evaluate(`(${fn.toString()})()`)
   await page.evaluate((y) => window.scrollTo(0, y), Math.round(y))
   await page.waitForTimeout(1500)
-  for (const [name, css] of Object.entries(VARIANTS)) {
-    const h = css ? await page.addStyleTag({ content: css }) : null
-    await page.waitForTimeout(400)
-    const rest = await measure('rest')
-    const scroll = await measure('scroll')
-    out[`${pos} · ${name}`] = { restMean: +rest.mean.toFixed(2), scrollMean: +scroll.mean.toFixed(2) }
-    if (h) await h.evaluate((el) => el.remove())
+  await measure('rest')
+  await measure('scroll')
+  const samples = Object.fromEntries(names.map((n) => [n, { rest: [], scroll: [] }]))
+  for (let r = 0; r < ROUNDS; r++) {
+    for (let k = 0; k < names.length; k++) {
+      const name = names[(k + r * 2) % names.length]
+      const css = VARIANTS[name]
+      const h = css ? await page.addStyleTag({ content: css }) : null
+      await page.waitForTimeout(300)
+      samples[name].rest.push((await measure('rest')).p50)
+      samples[name].scroll.push((await measure('scroll')).p50)
+      if (h) await h.evaluate((el) => el.remove())
+    }
   }
+  for (const n of names)
+    out[`${pos} · ${n}`] = { restP50: +median(samples[n].rest).toFixed(2), scrollP50: +median(samples[n].scroll).toFixed(2) }
 }
 console.table(out)
 await browser.close()

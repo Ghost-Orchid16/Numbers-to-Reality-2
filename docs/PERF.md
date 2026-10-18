@@ -92,8 +92,8 @@ short: DOM, layout, JavaScript and draw calls are identical at any pixel ratio.
 
 Every fix was benchmarked on its own build, in order, by the same bench script (`perf/steps/*.json`;
 1280×720, tier pinned high, 140 px per frame, two passes; `base` is the instrumented baseline
-`6fd8246` re-measured with the corrected frame probe). Times are milliseconds per frame on this
-container's CPU; "elements restyled" and "recalcs ≥ 500 elements" are counts from the trace of pass 2.
+`6fd8246` re-measured with the corrected frame probe), all on the first machine of this session.
+Times are milliseconds per frame on its CPU; "elements restyled" and "recalcs ≥ 500 elements" are counts from the trace of pass 2.
 
 | step | pass 1: programs / textures / geometries created | pass 1 main p95 | pass 2 script+style+layout p50 / p95 / mean | style p95 | elements restyled | recalcs ≥ 500 el | style recalcs | layouts | s per pass (software GL) |
 | --- | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -116,29 +116,62 @@ whose paths the pinned, pointer-less bench does not exercise (see the smoke test
 Pass 2 creates 0 programs, 0 textures and 0 geometries at every step, and React commits 2 times per
 pass (both chapter switches) at every step.
 
-Before → after, pass 2 unless noted:
+### Before → after on one machine
+
+The session moved to a slower machine half-way, so the final comparison was re-measured there, both
+builds back to back with the same bench (`perf/before-same-machine.json` = the baseline `6fd8246`,
+`perf/after.json` = this branch; pass 2 unless noted):
 
 | | before | after |
 | --- | ---: | ---: |
-| GPU programs / textures / vertex buffers created while scrolling (pass 1) | 44 / 4 / 31 | **0 / 0 / 0** |
-| longest frame of pass 1 (software GL; shader compiles) | 20.2 s | 3.4 s |
-| main thread (rAF + style + layout + paint) per frame, p95 — pass 1 / pass 2 | 54.8 / 28.5 ms | **13.3 / 13.5 ms** |
-| script + style + layout per frame, p50 / p95 / mean | 7.8 / 29.0 / 10.4 ms | **6.0 / 12.6 / 6.9 ms** |
-| style per frame, p95 | 19.7 ms | **1.1 ms** |
-| elements restyled per pass | 67,849 | **16,871** (12,575 at the old frame rate) |
-| whole-document style recalcs per pass | 30 | **6** (4 at the old frame rate) |
-| style recalcs per pass (forced and scheduled) | 989 | **686** |
-| software-GL time per pass (GPU-bound frames) | 216 s | **111 s** |
-| main-thread tasks ≥ 80 ms in a profiled pass, down + up (`npm run perf:profile`) | 14 | **0** (the longest left: 70 ms, the colour morph at the hero → chapter boundary; the `?perf` overlay's own first update aside) |
-| React commits during steady scroll | 0 | 0 |
+| GPU programs / textures / geometries created while scrolling, pass 1 | 44 / 4 / 31 | **0 / 0 / 0** |
+| GPU programs / textures / geometries created, pass 2 | 0 / 0 / 0 | 0 / 0 / 0 |
+| worst frame of pass 1 (software GL) | 27.0 s (hero: shader compiles) | 4.2 s |
+| main thread per frame p95 (rAF + style + layout + paint), pass 1 / pass 2 | 95.9 / 90.0 ms | **19.2 / 16.8 ms** |
+| JS per frame p95 | 46.1 ms | **7.8 ms** |
+| script + style + layout per frame p50 / p95 / mean | 45.5 / 86.8 / 38.9 ms | **8.0 / 14.2 / 9.0 ms** |
+| style per frame p95 | 72.3 ms | **1.3 ms** |
+| layout per frame p95 | 4.6 ms | 3.0 ms |
+| style time per pass (CDP) | 6.21 s | **0.23 s** |
+| script time per pass (CDP) | 1.34 s | 0.96 s |
+| elements restyled per pass | 529,137 | **14,638** |
+| whole-document recalcs (≥ 500 elements) per pass | 248 | **5** |
+| style recalcs / layouts per pass | 1,114 / 380 | 691 / 357 |
+| React commits per pass (both are chapter switches; 0 in steady scroll) | 2 | 2 |
 | ScrollTrigger refreshes during scroll | 0 | 0 |
-| draw calls p50 / max · triangles p50 | 62 / 106 · 335 k | **60 / 84 · 283 k** |
+| draw calls p50 / max | 62 / 107 | 60 / 84 |
+| frame p50 / time per pass (GPU-bound in software GL) | 1,183 ms / 275 s | **500 ms / 144 s** |
+| main-thread tasks ≥ 80 ms in a profiled pass, down + up (`npm run perf:profile`, first machine) | 14 | **0** |
 
-**Not reached here:** the p95 of script + style + layout is 12.6 ms on this container, above the 8 ms
-budget. The profile puts most of it in WebGL call submission ("(program)" native time inside
-`WebGLRenderer.render`, ~2.2 ms of JavaScript per frame plus the software driver behind it), which is
-far cheaper with a hardware driver; the DOM side (style p95 1.1 ms, layout p95 2.1 ms) is within
-budget. Confirm on the laptop with `?bench` (instructions at the end).
+On this slower machine the baseline's Lenis class churn hit almost every frame: each small scroll
+step finished within one (slow) frame, so Lenis flipped its classes on `<html>` — a whole-document
+restyle — 248 times in 231 frames. That is the regime of a laptop drawing 19 fps, and the reason the
+gain here (style 6.2 s → 0.2 s per pass) is larger than on the first machine (0.6 s → 0.2 s).
+
+**Not reached here:** the p95 of script + style + layout is 14.2 ms on this container (12.6 ms on the
+first one), above the 8 ms budget. The profile puts most of it in WebGL call submission ("(program)"
+native time inside `WebGLRenderer.render`, ~2.2 ms of JavaScript per frame plus the software driver
+behind it), which is far cheaper with a hardware driver; the DOM side (style p95 1.3 ms, layout p95
+3.0 ms) is within budget. Confirm on the laptop with `?bench` (instructions at the end). The longest
+main-thread task left is the colour morph at the hero → chapter boundary (70 ms here; see "Not
+changed").
+
+### GPU: frame time per scroll position (`npm run perf:gpu`, software GL, both builds on one machine)
+
+| position | before | after | |
+| --- | ---: | ---: | --- |
+| hero top | 2,022 ms | 1,586 ms | −22 % (sky and steam not shaded at zero presence) |
+| hero, swarm | 1,806 ms | 1,836 ms | ≈ (everything drawn here is visible) |
+| pad, chapter title | 2,555 ms | 2,245 ms | −12 % |
+| flight, climb | 1,883 ms | 1,215 ms | −35 % |
+| flight, space | 1,691 ms | 1,284 ms | −24 % |
+| lab | 2,075 ms | 1,471 ms | −29 % |
+| closing ("Next hall") | 2,160 ms | 1,432 ms | −34 % |
+
+Software rendering is fill-bound, so these rank the work, not a real GPU's frame time. The largest
+single item was the fully dissolved 13,000-glyph field, still drawn through the whole chapter:
+hiding it saved 282–1,070 ms per software frame at every chapter position before; it is no longer
+drawn there. (Per-component numbers in `perf/gpu-*.json` vary by ±150 ms between samples.)
 
 ## What changed, and why (in the order applied)
 
