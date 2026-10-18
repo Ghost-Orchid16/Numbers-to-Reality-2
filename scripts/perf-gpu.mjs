@@ -49,8 +49,9 @@ const VARIANTS = ['all', 'sky', 'planet', 'glyphs', 'ground', 'site', 'rocket', 
 await page.evaluate(() => {
   const s = window.__nrPerf.scene
   const pick = {
-    sky: (o) => o.renderOrder === -100,
-    planet: (o) => o.renderOrder === -90 || o.renderOrder === -89,
+    // by name; the render orders are those of builds before the far-plane sky (perf pass E)
+    sky: (o) => o.name === 'sky' || o.renderOrder === -100,
+    planet: (o) => o.name === 'planet' || o.name === 'planet-atmosphere' || o.renderOrder === -90 || o.renderOrder === -89,
     glyphs: (o) => o.renderOrder === 10 && o.isMesh,
     ground: (o) => o.isMesh && o.geometry?.parameters?.width === 9000,
     site: (o) => o.name === 'launch-site',

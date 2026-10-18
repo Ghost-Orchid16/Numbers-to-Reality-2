@@ -103,5 +103,5 @@ export function SkyDome() {
     [scene],
   )
 
-  return <mesh ref={mesh} geometry={geometry} material={material} renderOrder={1} frustumCulled={false} />
+  return <mesh ref={mesh} name="sky" geometry={geometry} material={material} renderOrder={1} frustumCulled={false} />
 }

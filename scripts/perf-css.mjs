@@ -6,7 +6,10 @@
  * effect toggled off in turn: the grain's mix-blend-mode, the grain, the vignette, the lab panel's
  * backdrop-filter, the countdown's SVG filter.
  *
- * Software compositing (SwiftShader) here: compare the variants with each other, not with a GPU.
+ * The WebGL renderer's draw calls are stubbed out (the canvas is hidden anyway) and Chromium runs
+ * without vsync or a frame-rate cap, so the frame interval is the real cost of style, layout,
+ * raster and compositing rather than 16.7 ms. Software compositing (SwiftShader) here: compare
+ * the variants with each other, not with a GPU.
  *   npm run build && npm run perf:css
  */
 import { chromium } from 'playwright'
@@ -16,12 +19,19 @@ import { fileURLToPath } from 'node:url'
 const root = fileURLToPath(new URL('..', import.meta.url))
 const server = await preview({ root, build: { outDir: 'dist' }, preview: { port: 4350, strictPort: false }, logLevel: 'warn' })
 const base = server.resolvedUrls.local[0]
-const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl'] })
+const browser = await chromium.launch({
+  args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl', '--disable-gpu-vsync', '--disable-frame-rate-limit'],
+})
 const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 })).newPage()
-await page.goto(`${base}?quality=high&dpr=0.5`, { waitUntil: 'domcontentloaded' })
+await page.goto(`${base}?quality=high&dpr=0.5&qa`, { waitUntil: 'domcontentloaded' })
 await page.waitForSelector('.loader', { state: 'detached', timeout: 600_000 })
 await page.waitForTimeout(3000)
 await page.addStyleTag({ content: '.stage{visibility:hidden!important}' })
+// no WebGL work at all: only the DOM is rasterised and composited
+await page.evaluate(() => {
+  const gl = window.__nrQA?.gl
+  if (gl) gl.render = () => {}
+})
 
 const VARIANTS = {
   baseline: '',
@@ -37,7 +47,7 @@ const POS = {
   lab: () => document.querySelector('#rocket-lab').getBoundingClientRect().top + scrollY,
 }
 const measure = (mode) => page.evaluate(async (mode) => {
-  const N = 90, dts = []
+  const N = 120, dts = []
   let last = performance.now()
   const y0 = scrollY
   for (let i = 0; i < N; i++) {

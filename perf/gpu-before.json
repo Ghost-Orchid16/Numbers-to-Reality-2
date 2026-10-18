@@ -1,0 +1,95 @@
+{
+  "meta": {
+    "date": "2026-10-18T07:37:57.729Z",
+    "viewport": "1280×720",
+    "frames": 6,
+    "query": "quality=high",
+    "note": "ms saved per frame when the component is hidden (SwiftShader)"
+  },
+  "results": [
+    {
+      "position": "hero-top",
+      "full": 2022,
+      "sky": 147.7,
+      "planet": 383.4,
+      "glyphs": 578,
+      "ground": 305.3,
+      "site": null,
+      "rocket": null,
+      "steam": 182.4,
+      "post-only": 842.7
+    },
+    {
+      "position": "hero-swarm",
+      "full": 1806.4,
+      "sky": -26.4,
+      "planet": 119.3,
+      "glyphs": 531.9,
+      "ground": 253.3,
+      "site": null,
+      "rocket": null,
+      "steam": 31.1,
+      "post-only": 715.1
+    },
+    {
+      "position": "pad-title",
+      "full": 2555.4,
+      "sky": 577.4,
+      "planet": 632.5,
+      "glyphs": 1070.5,
+      "ground": 728.5,
+      "site": 579.4,
+      "rocket": 590.8,
+      "steam": 601.6,
+      "post-only": 1492.1
+    },
+    {
+      "position": "flight-climb",
+      "full": 1883.1,
+      "sky": 146.6,
+      "planet": 192.9,
+      "glyphs": 574,
+      "ground": 99.2,
+      "site": 131.7,
+      "rocket": 181.5,
+      "steam": 113.8,
+      "post-only": 910.1
+    },
+    {
+      "position": "flight-space",
+      "full": 1691,
+      "sky": -110.5,
+      "planet": -14.7,
+      "glyphs": 282.1,
+      "ground": 108.6,
+      "site": null,
+      "rocket": -115.6,
+      "steam": -76.9,
+      "post-only": 374.9
+    },
+    {
+      "position": "lab",
+      "full": 2074.6,
+      "sky": -108.6,
+      "planet": -119.3,
+      "glyphs": 419.1,
+      "ground": 290.7,
+      "site": 59.4,
+      "rocket": -148.6,
+      "steam": 14.9,
+      "post-only": 576.4
+    },
+    {
+      "position": "closing",
+      "full": 2159.8,
+      "sky": 82.7,
+      "planet": 112,
+      "glyphs": 459.1,
+      "ground": 295.5,
+      "site": -77,
+      "rocket": -28,
+      "steam": -68.8,
+      "post-only": 656.7
+    }
+  ]
+}

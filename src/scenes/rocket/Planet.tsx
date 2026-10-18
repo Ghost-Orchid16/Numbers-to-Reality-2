@@ -165,8 +165,8 @@ export function Planet() {
   return (
     <>
       {/* after the opaques and the sky (1), before the trajectory lines (3); see SkyDome */}
-      <mesh ref={surfaceMesh} geometry={geometry} material={material} renderOrder={2} frustumCulled={false} />
-      <mesh ref={atmoMesh} geometry={geometry} material={atmoMaterial} renderOrder={-89} frustumCulled={false} />
+      <mesh ref={surfaceMesh} name="planet" geometry={geometry} material={material} renderOrder={2} frustumCulled={false} />
+      <mesh ref={atmoMesh} name="planet-atmosphere" geometry={geometry} material={atmoMaterial} renderOrder={-89} frustumCulled={false} />
     </>
   )
 }
