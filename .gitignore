@@ -16,6 +16,8 @@ qa/
 perf/before*/
 perf/after*/
 perf/_*
+# full-resolution diff masks (the report and the contact sheets are committed)
+perf/diff/*.png
 
 # logs
 *.log
