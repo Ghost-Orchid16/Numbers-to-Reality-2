@@ -228,6 +228,40 @@ slow): the tier stepped high → medium → low only while the page was at rest;
 scrolls the canvas went to 0.7× its pixel ratio and back to 1× each time the scroll settled; no
 console errors.
 
+## Visual parity — verified
+
+`npm run perf:shots` (qa build, `?still&quality=high`: frozen ambient clock, seeded randomness, no
+CSS motion, pinned tier) at 22 scroll positions × 1920×1080, 1440×900, 390×844, before
+(`6fd8246`) and after; `npm run perf:diff` compares them with pixelmatch at its perceptual threshold
+(0.1) and exactly (0). Report and contact sheets: `perf/diff/`.
+
+| viewport | shots identical at 0.1 | shots bit-identical | the rest |
+| --- | ---: | ---: | --- |
+| 1920×1080 | 21 / 22 | 18 / 22 | max-Q label (338 px); ≤ 124 px exact noise elsewhere |
+| 1440×900 | 21 / 22 | 18 / 22 | max-Q label (2 px); ≤ 166 px exact noise elsewhere |
+| 390×844 (vs a fresh baseline run) | 20 / 22 | 19 / 22 | max-Q label (598 px), title (2 px) |
+
+What is left is the baseline's own run-to-run variation, measured by re-running the unmodified
+baseline: two runs of it differ by up to 130 px exactly (hero top), and its MAX-Q label varies by
+up to ~330 px between runs (a `will-change: transform` layer whose body sits on a half pixel —
+`translateY(-50%)` — is rasterised slightly differently depending on transform history). Its
+placement and text were read back in both builds and are identical at every viewport
+(`translate3d(770.3px, 334.7px, 0)` at 1440, `(1020.4px, 401.6px)` at 1920, `(242.1px, 313.8px)`
+at 390; "MAX-Q 24.5 kPa · 12.4 km"). The original mobile baseline set was itself not reproducible
+on three shots (title, max-Q, lab flying: a fresh run of the same baseline code differs from it by
+225 / 232 / 69 px), so mobile is compared against a fresh baseline run.
+
+**Found by this check and fixed:** E first hid the sky at zero presence by setting the renderer's
+clear colour to the sky's ink. That colour persisted into the dusk, other renders clear with it,
+and lit surfaces moved by a fraction of a level (~45,000 pixels one level off per frame — below the
+perceptual threshold, but not the same pixels). Bisected to that one line (the far-plane sky and
+its draw order are bit-exact on their own); the sky is now hidden through `scene.background`, which
+applies the same colour to the main render only.
+
+**G and rounding:** a numeric scrub routed the scrubbed progress through a tween whose values GSAP
+rounds to 6 decimals; `scrub: true` applies the exact progress. No difference beyond the baseline's
+run-to-run variation was measurable at any of the 66 positions.
+
 ## Not changed — would alter the look (or risk it)
 
 | candidate | why not | measured / estimated gain |
