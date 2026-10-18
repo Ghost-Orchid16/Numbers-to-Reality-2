@@ -1,5 +1,5 @@
-import { useFrame } from '@react-three/fiber'
-import { useRef } from 'react'
+import { useFrame, useThree } from '@react-three/fiber'
+import { useEffect, useRef } from 'react'
 import { BackSide, Color, ShaderMaterial, SphereGeometry, type Mesh } from 'three'
 import { smoothstep } from '../../sim/core/math'
 import { ambientDt } from '../../perf/still'
@@ -17,6 +17,7 @@ const INK = new Color('#05060A').convertSRGBToLinear()
  */
 export function SkyDome() {
   const mesh = useRef<Mesh>(null)
+  const scene = useThree((st) => st.scene)
   const geometry = useDisposable(() => new SphereGeometry(1, 64, 40), [])
   const material = useDisposable(
     () =>
@@ -85,11 +86,22 @@ export function SkyDome() {
     u.uStars.value = 0.09 + 0.91 * smoothstep(8000, 70000, camAlt)
     u.uPresence.value = frame.handoff.presence
     u.uTime.value += ambientDt(dt)
-    // At presence 0 (the hero before the dusk fades in) the sky outputs exactly uInk: clear to
-    // that value instead of shading the whole screen to it.
-    m.visible = frame.handoff.presence > 0
-    if (!m.visible) state.gl.setClearColor(INK, 1)
+    // At presence 0 (the hero before the dusk fades in) the sky outputs exactly uInk: the main
+    // render clears to that value instead of shading the whole screen to it. Through
+    // scene.background (same colour conversion as the shader's uniform), never the renderer's
+    // clear colour: that one persists and other renders clear with it — changing it shifted the
+    // lit surfaces by a fraction of a level (?still parity screenshots).
+    const hidden = frame.handoff.presence <= 0
+    m.visible = !hidden
+    const background = hidden ? INK : null
+    if (state.scene.background !== background) state.scene.background = background
   })
+  useEffect(
+    () => () => {
+      if (scene.background === INK) scene.background = null
+    },
+    [scene],
+  )
 
   return <mesh ref={mesh} geometry={geometry} material={material} renderOrder={1} frustumCulled={false} />
 }
