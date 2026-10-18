@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { onFrame } from '../motion/frame'
 import { gsap } from '../motion/gsap'
 import { usePrefs } from '../state/prefs'
 
@@ -44,8 +45,18 @@ export function Cursor() {
       }
       hover(e.target as Element | null)
     }
-    // the page scrolls under a still pointer: re-check what is under it
-    const onScroll = () => visible && hover(document.elementFromPoint(pos.x, pos.y))
+    // The page scrolls under a still pointer: re-check what is under it — at the end of the same
+    // frame (after every DOM write), not in the scroll event, where elementFromPoint forced a
+    // layout that the frame's own writes then invalidated again.
+    let recheck = false
+    const onScroll = () => {
+      recheck = visible
+    }
+    const afterFrame = () => {
+      if (!recheck) return
+      recheck = false
+      if (visible) hover(document.elementFromPoint(pos.x, pos.y))
+    }
     const onLeave = () => {
       visible = false
       gsap.to([d, r], { autoAlpha: 0, duration: 0.3, overwrite: 'auto' })
@@ -53,21 +64,28 @@ export function Cursor() {
     const onDown = () => r.classList.add('is-down')
     const onUp = () => {
       r.classList.remove('is-down')
-      // labels change on click (Launch → Pause): re-read after React re-renders
-      requestAnimationFrame(() => visible && hover(document.elementFromPoint(pos.x, pos.y)))
+      // labels change on click (Launch → Pause): re-read at the end of the next frame, after
+      // React has re-rendered
+      recheck = visible
     }
+    // written only when they change: a still pointer costs nothing per frame
+    let dotAt = ''
+    let ringAt = ''
     const tick = () => {
       lag.x += (pos.x - lag.x) * k
       lag.y += (pos.y - lag.y) * k
-      d.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`
-      r.style.transform = `translate3d(${lag.x}px, ${lag.y}px, 0)`
+      const dt = `translate3d(${pos.x}px, ${pos.y}px, 0)`
+      const rt = `translate3d(${lag.x}px, ${lag.y}px, 0)`
+      if (dt !== dotAt) d.style.transform = dotAt = dt
+      if (rt !== ringAt) r.style.transform = ringAt = rt
     }
     window.addEventListener('pointermove', onMove, { passive: true })
     window.addEventListener('scroll', onScroll, { passive: true })
     document.addEventListener('pointerleave', onLeave)
     window.addEventListener('pointerdown', onDown)
     window.addEventListener('pointerup', onUp)
-    gsap.ticker.add(tick)
+    const offFrame = onFrame('dom', tick)
+    const offAfter = onFrame('post', afterFrame)
     return () => {
       root.classList.remove('has-custom-cursor')
       window.removeEventListener('pointermove', onMove)
@@ -75,7 +93,8 @@ export function Cursor() {
       document.removeEventListener('pointerleave', onLeave)
       window.removeEventListener('pointerdown', onDown)
       window.removeEventListener('pointerup', onUp)
-      gsap.ticker.remove(tick)
+      offFrame()
+      offAfter()
     }
   }, [coarse, reduced])
 

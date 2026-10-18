@@ -1,6 +1,7 @@
 import { Effect, EffectAttribute } from 'postprocessing'
 import { useEffect, useMemo } from 'react'
 import { Uniform, Vector2 } from 'three'
+import { ambientDt } from '../perf/still'
 
 /**
  * Heat shimmer: a screen-space refraction of the image behind a rocket plume. The scene
@@ -58,7 +59,7 @@ export class HeatHazeEffect extends Effect {
   }
 
   override update(_r: unknown, inputBuffer: { width: number; height: number }, deltaTime?: number): void {
-    this.uniforms.get('uTime')!.value += deltaTime ?? 0.016
+    this.uniforms.get('uTime')!.value += ambientDt(deltaTime ?? 0.016)
     this.uniforms.get('uAspect')!.value = inputBuffer.width / Math.max(1, inputBuffer.height)
   }
 

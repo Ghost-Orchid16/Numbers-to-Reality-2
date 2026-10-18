@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { Vector3, type PerspectiveCamera } from 'three'
 import { COUNTDOWN, rocket, rocketScroll } from '../../chapters/rocket/runtime'
 import { smoothstep } from '../../sim/core/math'
+import { ambientTime, STILL } from '../../perf/still'
 import { useDirector } from '../../state/director'
 import { usePrefs } from '../../state/prefs'
 import { frame } from './frame'
@@ -20,6 +21,9 @@ interface Shot {
 }
 
 const v3 = () => new Vector3()
+
+/** Projection updates are skipped below this change (exact under ?still, so shots are repeatable). */
+const PROJ_EPS = STILL ? 0 : 1e-3
 
 /**
  * Camera direction for the rocket chapter. Render space: the rocket sits at the origin and the
@@ -71,7 +75,7 @@ export function RocketCamera() {
     shot.shiftY = 0
 
     if (section === 'title') {
-      const k = state.clock.elapsedTime
+      const k = ambientTime(state.clock.elapsedTime)
       shot.pos.copy(POSE_PAD.position)
       if (!reduced) shot.pos.x += Math.sin(k * 0.11) * 1.6
       shot.target.copy(POSE_PAD.target)
@@ -149,7 +153,7 @@ export function RocketCamera() {
         (1 - smoothstep(150, 1600, frame.altitude)) *
         (section === 'flight' ? 1 : 0.5)
     }
-    const k = state.clock.elapsedTime
+    const k = ambientTime(state.clock.elapsedTime)
     cam.lookAt(
       s.look.x + shake * Math.sin(k * 47.3) * Math.sin(k * 3.1),
       s.look.y + shake * Math.sin(k * 59.7 + 1.3) * 0.7,
@@ -158,11 +162,11 @@ export function RocketCamera() {
 
     const near = frame.altitude > 3000 || section === 'flight' ? Math.min(4, 0.3 + frame.altitude / 2000) : 0.3
     let dirty = false
-    if (Math.abs(cam.fov - s.fov) > 1e-3) {
+    if (Math.abs(cam.fov - s.fov) > PROJ_EPS) {
       cam.fov = s.fov
       dirty = true
     }
-    if (Math.abs(cam.near - near) > 1e-3) {
+    if (Math.abs(cam.near - near) > PROJ_EPS) {
       cam.near = near
       dirty = true
     }

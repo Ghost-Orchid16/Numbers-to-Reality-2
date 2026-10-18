@@ -1,13 +1,23 @@
 import { AdaptiveDpr, PerformanceMonitor } from '@react-three/drei'
 import { Canvas, useThree } from '@react-three/fiber'
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { WORLDS } from '../design/worlds'
+import { isLoaded } from '../lib/loading'
+import { onFrame } from '../motion/frame'
+import { gsap } from '../motion/gsap'
+import { getLenis } from '../motion/scroll'
 import { SCENES } from '../scenes/registry'
+import { ADAPTIVE_QUALITY, FLAGS } from '../perf/flags'
+import { registerRenderer } from '../perf/probe'
 import { mountedChapters, useDirector, type Quality } from '../state/director'
 import { usePrefs } from '../state/prefs'
+import { scrollState } from '../state/scroll'
 import { Effects } from './Effects'
 import { Precompile } from './Precompile'
+
+// ?quality=… pins the tier before anything renders (diagnostics; the monitor is then off)
+if (FLAGS.quality) useDirector.setState({ quality: FLAGS.quality })
 
 const DOWN: Record<Quality, Quality> = { high: 'medium', medium: 'low', low: 'low' }
 const UP: Record<Quality, Quality> = { high: 'high', medium: 'high', low: 'medium' }
@@ -29,6 +39,88 @@ function SceneRouter() {
   )
 }
 
+/**
+ * Adaptive quality, judged only on frames the visitor sees: the monitor starts 1.5 s after the
+ * loader's reveal (start-up frames compile shaders and would read as a slow machine), and a tier
+ * change waits until scrolling stops — a change rebuilds glyphs, particles and passes, which is a
+ * hitch mid-scroll but invisible at rest.
+ */
+function AdaptiveQuality() {
+  const ready = useDirector((s) => s.ready)
+  const setQuality = useDirector((s) => s.setQuality)
+  const [live, setLive] = useState(false)
+  const pending = useRef<Quality | null>(null)
+  useEffect(() => {
+    if (!ready) return
+    const t = setTimeout(() => setLive(true), 1500)
+    return () => clearTimeout(t)
+  }, [ready])
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (pending.current && !getLenis()?.isScrolling && Math.abs(scrollState.velocity) < 1) {
+        setQuality(pending.current)
+        pending.current = null
+      }
+    }, 250)
+    return () => clearInterval(id)
+  }, [setQuality])
+  if (!live) return null
+  const request = (q: Quality) => {
+    pending.current = q
+  }
+  const current = () => pending.current ?? useDirector.getState().quality
+  return (
+    <PerformanceMonitor
+      flipflops={4}
+      onDecline={() => request(DOWN[current()])}
+      onIncline={() => request(UP[current()])}
+      onFallback={() => request('low')}
+    />
+  )
+}
+
+/**
+ * Safety net for machines that cannot hold ~55 fps: while the page scrolls fast, the canvas
+ * renders at 70 % of its pixel ratio, and the full ratio returns once the scroll has settled.
+ * Machines that keep up are never touched — frame time is measured only at full resolution — and
+ * nothing is removed: the same objects and effects, fewer pixels, for the length of a gesture.
+ * (Each switch resizes the canvas and the post buffers once; both happen at gesture edges.)
+ */
+const SCROLL_DPR_SCALE = 0.7
+const FAST_SCROLL = 900 // px/s
+const STRUGGLING_MS = 1000 / 55
+
+function ScrollResolution({ min, max }: { min: number; max: number }) {
+  const setDpr = useThree((s) => s.setDpr)
+  useEffect(() => {
+    const base = Math.min(Math.max(min, window.devicePixelRatio), max)
+    let ema = 1000 / 60
+    let samples = 0
+    let lowered = false
+    let calm = 0
+    return onFrame('post', (_t, dt) => {
+      if (!useDirector.getState().ready) return
+      const ms = Math.min(dt * 1000, 100)
+      if (!lowered) {
+        ema += (ms - ema) * 0.05
+        // the first frames after the reveal are not a verdict on the machine
+        if (++samples > 90 && ema > STRUGGLING_MS && Math.abs(scrollState.velocity) > FAST_SCROLL) {
+          lowered = true
+          calm = 0
+          setDpr(base * SCROLL_DPR_SCALE)
+        }
+        return
+      }
+      if (getLenis()?.isScrolling || Math.abs(scrollState.velocity) > 1) calm = 0
+      else if ((calm += ms) > 250) {
+        lowered = false
+        setDpr(base)
+      }
+    })
+  }, [min, max, setDpr])
+  return null
+}
+
 /** Canvas clear colour follows the active world. */
 function ClearColor() {
   const gl = useThree((s) => s.gl)
@@ -39,52 +131,68 @@ function ClearColor() {
   return null
 }
 
-/** Pause rendering entirely while the tab is hidden. */
-function useVisibilityFrameloop(): 'always' | 'never' {
-  const [loop, setLoop] = useState<'always' | 'never'>(document.hidden ? 'never' : 'always')
+/**
+ * One clock: the canvas has no render loop of its own (frameloop="never"). It is advanced from
+ * the shared frame loop's 'render' stage — after Lenis, ScrollTrigger, GSAP and the simulation
+ * have produced this frame's state, before the DOM labels that follow it (motion/frame.ts).
+ * requestAnimationFrame stops in hidden tabs, so rendering pauses with it.
+ */
+function FrameDriver() {
+  const advance = useThree((s) => s.advance)
+  const clock = useThree((s) => s.clock)
   useEffect(() => {
-    const on = () => setLoop(document.hidden ? 'never' : 'always')
-    document.addEventListener('visibilitychange', on)
-    return () => document.removeEventListener('visibilitychange', on)
-  }, [])
-  return loop
+    // R3F derives delta from the previous timestamp: start from the ticker's current time
+    clock.elapsedTime = gsap.ticker.time
+    let warm = 0
+    return onFrame('render', (time) => {
+      // Behind the opaque loader nothing can be seen once the shaders are built: a few more
+      // frames build the post-processing passes, then the canvas waits for the reveal (the
+      // loader's own animation gets the main thread and the GPU).
+      if (!useDirector.getState().ready && isLoaded('gpu:compile') && warm++ >= 3) return
+      advance(time)
+    })
+  }, [advance, clock])
+  return null
 }
 
 /**
  * THE STAGE — one persistent full-viewport WebGL canvas fixed behind the DOM.
- * Adaptive quality: PerformanceMonitor moves a tier (DPR range, particle counts, AO);
- * AdaptiveDpr handles transient regressions. DPR ∈ [1, 2] desktop, [1, 1.5] compact.
+ * Adaptive quality: PerformanceMonitor moves a tier (DPR range, particle counts, AO) at rest;
+ * ScrollResolution lowers the pixel ratio during fast scrolls on machines that cannot keep up;
+ * AdaptiveDpr serves `performance.regress()` callers. DPR ∈ [1, 2] desktop, [1, 1.5] compact.
  */
 export default function Stage() {
   const quality = useDirector((s) => s.quality)
-  const setQuality = useDirector((s) => s.setQuality)
   const compact = usePrefs((s) => s.compact)
-  const frameloop = useVisibilityFrameloop()
   const dprMax = compact ? 1.5 : 2
-  const dpr: [number, number] = quality === 'low' ? [1, 1] : quality === 'medium' ? [1, Math.min(1.5, dprMax)] : [1, dprMax]
+  const dpr: [number, number] = FLAGS.dpr
+    ? [FLAGS.dpr, FLAGS.dpr]
+    : quality === 'low'
+      ? [1, 1]
+      : quality === 'medium'
+        ? [1, Math.min(1.5, dprMax)]
+        : [1, dprMax]
 
   return (
     <div className="stage" aria-hidden="true">
       <Canvas
         dpr={dpr}
-        frameloop={frameloop}
+        frameloop="never"
         flat={false}
         gl={{ antialias: false, powerPreference: 'high-performance', alpha: false, stencil: false, depth: true }}
         camera={{ fov: 35, near: 0.3, far: 120000, position: [0, 18, 140] }}
         style={{ touchAction: 'pan-y' }}
-        onCreated={({ gl }) => {
+        onCreated={({ gl, scene }) => {
           gl.setClearColor(WORLDS.intro.colors.bg, 1)
+          registerRenderer(gl, scene)
           // QA hook (screenshot script): read renderer.info to verify nothing leaks
-          if (new URLSearchParams(location.search).has('qa')) (window as unknown as { __nrQA: unknown }).__nrQA = { gl }
+          if (FLAGS.qa) (window as unknown as { __nrQA: unknown }).__nrQA = { gl }
         }}
       >
-        <PerformanceMonitor
-          flipflops={4}
-          onDecline={() => setQuality(DOWN[useDirector.getState().quality])}
-          onIncline={() => setQuality(UP[useDirector.getState().quality])}
-          onFallback={() => setQuality('low')}
-        />
+        {ADAPTIVE_QUALITY && <AdaptiveQuality />}
+        {ADAPTIVE_QUALITY && <ScrollResolution min={dpr[0]} max={dpr[1]} />}
         <AdaptiveDpr />
+        <FrameDriver />
         <ClearColor />
         <SceneRouter />
         <Precompile needs={['intro', 'rocket']} />

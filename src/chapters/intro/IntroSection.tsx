@@ -69,14 +69,16 @@ export function IntroSection() {
           .from('.hero-arrow', { scaleX: 0, transformOrigin: '0% 50%', duration: 1.2 }, 0.55)
           .from(fades, { autoAlpha: 0, y: 26, duration: 1.2, stagger: 0.09 }, 0.75)
       }
-      // weight thin → black as the numbers become real, then the title clears for the rocket
-      const st = { trigger: el, start: 'top top', end: '28% top', scrub: reduced ? true : 1 }
+      // weight thin → black as the numbers become real, then the title clears for the rocket.
+      // scrub: true — Lenis already smooths the scroll position; a numeric scrub only stacked a
+      // second catch-up lag on top of it (same scroll → state mapping at rest).
+      const st = { trigger: el, start: 'top top', end: '28% top', scrub: true }
       gsap.fromTo(title, { '--wght': reduced ? 800 : 420 }, { '--wght': 900, ease: 'none', immediateRender: false, scrollTrigger: st })
       gsap.to('.hero-copy', {
         autoAlpha: 0,
         y: reduced ? 0 : -60,
         ease: 'none',
-        scrollTrigger: { trigger: el, start: '11% top', end: '25% top', scrub: reduced ? true : 1 },
+        scrollTrigger: { trigger: el, start: '11% top', end: '25% top', scrub: true },
       })
       gsap.fromTo(
         caption,

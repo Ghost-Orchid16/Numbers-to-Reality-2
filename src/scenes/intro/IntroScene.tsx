@@ -1,6 +1,6 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { easing } from 'maath'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AdditiveBlending,
   Color,
@@ -16,6 +16,7 @@ import {
 import { MeshSurfaceSampler } from 'three/examples/jsm/math/MeshSurfaceSampler.js'
 import { IRIDESCENT } from '../../design/worlds'
 import { trackLoad } from '../../lib/loading'
+import { ambientDt, seededRandom, STILL } from '../../perf/still'
 import { useDirector } from '../../state/director'
 import { usePrefs } from '../../state/prefs'
 import { scrollState } from '../../state/scroll'
@@ -125,6 +126,9 @@ function GlyphField() {
     void trackLoad('sampler:rocket', `Rocket hull · ${count.toLocaleString('en-US')} surface samples`, () => {
       const geo = buildRocketSampleGeometry()
       const sampler = new MeshSurfaceSampler(new Mesh(geo)).build()
+      // ?still: an RNG of its own, so the samples never depend on other code's use of Math.random
+      // (setRandomGenerator exists in three r186 but is missing from @types/three)
+      if (STILL) (sampler as unknown as { setRandomGenerator: (f: () => number) => void }).setRandomGenerator(seededRandom(0x0d0c))
       const out = new Float32Array(count * 3)
       const p = new Vector3()
       const c = Math.cos(ROCKET_YAW)
@@ -210,17 +214,21 @@ function GlyphField() {
   }, [geometry, material, mark])
   useEffect(() => () => mark('intro', false), [mark])
 
+  const mesh = useRef<Mesh>(null)
   useFrame((_s, dt) => {
     if (!material) return
     const ph = introPhases(scrollState.intro.progress)
-    material.uniforms.uTime.value += dt
+    material.uniforms.uTime.value += ambientDt(dt)
     material.uniforms.uAssemble.value = ph.assemble
     material.uniforms.uReveal.value = ph.reveal
     material.uniforms.uDrift.value = reduced ? 0 : 1
+    // From reveal ≈ 0.991 every glyph has dissolved into the hull (vAlpha = 0, all fragments
+    // discarded): through the whole rocket chapter the 13,000 quads need not be drawn at all.
+    if (mesh.current) mesh.current.visible = ph.reveal < 0.995
   })
 
   if (!geometry || !material) return null
-  return <mesh geometry={geometry} material={material} frustumCulled={false} renderOrder={10} />
+  return <mesh ref={mesh} geometry={geometry} material={material} frustumCulled={false} renderOrder={10} />
 }
 
 /** Hero camera: from the glyph field down to the launch-pad shot where Chapter 01 begins. */
@@ -253,7 +261,7 @@ function IntroCamera() {
     easing.damp3(st.look, st.target, 0.2, dt)
     cam.lookAt(st.look)
     const fov = POSE_HERO.fov + (POSE_PAD.fov - POSE_HERO.fov) * e
-    if (Math.abs(cam.fov - fov) > 1e-3 || cam.view?.enabled) {
+    if (Math.abs(cam.fov - fov) > (STILL ? 0 : 1e-3) || cam.view?.enabled) {
       cam.fov = fov
       cam.clearViewOffset()
       cam.updateProjectionMatrix()

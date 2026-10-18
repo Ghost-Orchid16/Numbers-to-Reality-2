@@ -3,8 +3,11 @@ import { EquationBlock } from '../../components/EquationBlock'
 import { Live } from '../../components/Live'
 import { LiveMetric } from '../../components/LiveMetric'
 import { ScrollNarrative, type NarrativeStep } from '../../components/ScrollNarrative'
+import { setText } from '../../lib/dom'
 import { cv } from '../../lib/tex'
+import { onFrame } from '../../motion/frame'
 import { gsap, ScrollTrigger, useGSAP } from '../../motion/gsap'
+import { STILL, STILL_TIME } from '../../perf/still'
 import { usePrefs } from '../../state/prefs'
 import { flightTimeAt, keyMoments } from './flightMap'
 import { read, txt } from './readouts'
@@ -23,7 +26,8 @@ function Countdown() {
 
   useEffect(() => {
     let last = ''
-    const tick = (time: number) => {
+    const tick = (now: number) => {
+      const time = STILL ? STILL_TIME : now
       const t = rocket.viewTime
       const tl = traj().liftoffTime
       let label = ''
@@ -34,20 +38,20 @@ function Countdown() {
       }
       if (label !== last) {
         last = label
-        if (text.current) text.current.textContent = label
+        setText(text.current, label)
         wrap.current?.setAttribute('data-on', label ? 'true' : 'false')
         wrap.current?.setAttribute('data-kind', label.length > 2 ? 'word' : 'digit')
       }
-      // heat shimmer: stronger once the engine burns
-      if (!reduced && turb.current && disp.current) {
+      // heat shimmer: stronger once the engine burns — only while a word or digit is showing
+      // (the filter has nothing to distort otherwise; writing it every frame re-styled it)
+      if (label && !reduced && turb.current && disp.current) {
         const hot = t >= 0 ? 1 : 0.25
         turb.current.setAttribute('baseFrequency', `0.012 ${(0.06 + 0.01 * Math.sin(time * 3)).toFixed(4)}`)
         turb.current.setAttribute('seed', String(Math.floor(time * 14) % 50))
         disp.current.setAttribute('scale', (6 * hot).toFixed(2))
       }
     }
-    gsap.ticker.add(tick)
-    return () => gsap.ticker.remove(tick)
+    return onFrame('dom', tick)
   }, [reduced])
 
   return (
@@ -226,7 +230,9 @@ export function FlightSequence() {
           start: 'top top',
           end: `+=${length}%`,
           pin: true,
-          scrub: 1,
+          // the Lenis-smoothed scroll position drives simulated time directly: a numeric scrub
+          // stacked a second ~1 s catch-up on top of Lenis (same scroll → time mapping at rest)
+          scrub: true,
           onEnter: enter,
           onEnterBack: enter,
           onLeaveBack: back,

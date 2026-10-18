@@ -42,7 +42,31 @@
 ### Never (§11)
 Fake live numbers or randomly animated equations · static pages called "interactive" · neon everything / gradient soup / glass cards everywhere · stock photos · system fonts or default Three.js look · brand logos/liveries · teaching models presented as real engineering tools · one giant Three.js component or copy-pasted chapter architectures · login/database/chatbot/ads · broken placeholder sections.
 
+## Performance budget & rules (perf pass — binding for chapters 02–08 from day one)
+Budget: 60 fps on a mid laptop, 30+ on a mid phone; main-thread script + style + layout p95 < 8 ms per
+frame; 0 React commits during steady scroll; 0 programs / textures / geometries created and 0 long
+animation frames > 50 ms at section boundaries on the second scroll pass. Details and tools: docs/PERF.md.
+- **One clock.** Everything per-frame subscribes to `onFrame(stage, fn)` (motion/frame.ts): Lenis →
+  GSAP → 'sim' → 'dom' → 'render' → 'post'. No other `requestAnimationFrame` loop, no `useFrame` loops that
+  run while their scene is hidden (early-return), no animation `setInterval`.
+- **Nothing expensive at mount or on first sight.** Every material, light set and texture of a chapter
+  is compiled and uploaded under the loader (`Precompile`). Never add/remove lights, flip `castShadow`,
+  or change a material's defines/feature flags at runtime — set intensity 0 / uniforms instead.
+- **No per-frame React state.** High-frequency values live in refs/stores; DOM readouts go through
+  `onReadout` (12 Hz, idle when off-screen) and `setText` (rewrite the text node, never `textContent`).
+- **Never mount/unmount or toggle post effects** (or change their constructor props) while scrolling: that
+  rebuilds the composer's passes. Adaptive tier changes wait for the scroll to rest.
+- **No layout reads in the frame loop.** Cache sizes with ResizeObserver, visibility with
+  IntersectionObserver; animate transform/opacity only; write a style only when its value changed.
+- **No allocations in hot loops**: reuse vectors, colours, snapshots and objects (`out` parameters).
+- **No `ScrollTrigger.refresh()` during scroll**; scrubs use `scrub: true` (Lenis is the one smoothing).
+- **Draw nothing that cannot be seen**: hide meshes whose output is fully transparent/occluded; background
+  layers sit on the far plane with a depth test.
+- **`npm run build && npm run bench` must pass before every phase commit** (exit 0: no GPU resource
+  created in pass 2), and the `?still` parity screenshots (`npm run perf:shots` / `perf:diff`) must match
+  for any change that claims to be visual-neutral.
+
 ## Workflow
 - npm only. Offline after install: no runtime CDNs, HDRIs, remote fonts or models.
-- After every phase: `npm run typecheck && npm run lint && npm test && npm run build` all green; vitest for every sim against known answers; Playwright screenshots (1440×900, 390×844) reviewed by eye; commit; brief report.
+- After every phase: `npm run typecheck && npm run lint && npm test && npm run build && npm run bench` all green; vitest for every sim against known answers; Playwright screenshots (1440×900, 390×844) reviewed by eye; commit; brief report.
 - Playwright: Chromium is pre-installed at /opt/pw-browsers — never run `playwright install`. Screenshot script: `npm run qa:shots` (see scripts/).

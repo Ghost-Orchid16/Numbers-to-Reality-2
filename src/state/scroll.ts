@@ -7,6 +7,8 @@ import type { ChapterId } from '../content/chapters'
 export const scrollState = {
   /** smoothed scroll velocity (px/s, signed) */
   velocity: 0,
+  /** page scroll progress 0..1 (top → bottom) */
+  progress: 0,
   /** progress 0..1 through each chapter's section */
   chapter: {} as Partial<Record<ChapterId, number>>,
   /** hero: 0 at the top, 1 when the glyphs have become the rocket */

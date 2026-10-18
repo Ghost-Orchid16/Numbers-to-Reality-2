@@ -12,17 +12,13 @@ export interface Formatted {
 }
 
 const MINUS = '−'
-const nfCache = new Map<string, Intl.NumberFormat>()
-
-function nf(opts: Intl.NumberFormatOptions): Intl.NumberFormat {
-  const key = JSON.stringify(opts)
-  let f = nfCache.get(key)
-  if (!f) {
-    f = new Intl.NumberFormat('en-US', opts)
-    nfCache.set(key, f)
-  }
-  return f
-}
+// One formatter per precision, created once: readouts format several numbers ~12× a second.
+const sigFormats: Intl.NumberFormat[] = []
+const fixedFormats: Intl.NumberFormat[] = []
+const nfSig = (sig: number): Intl.NumberFormat =>
+  (sigFormats[sig] ??= new Intl.NumberFormat('en-US', { maximumSignificantDigits: sig }))
+const nfFixed = (digits: number): Intl.NumberFormat =>
+  (fixedFormats[digits] ??= new Intl.NumberFormat('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits }))
 
 const fixMinus = (s: string): string => s.replace('-', MINUS)
 
@@ -30,13 +26,13 @@ const fixMinus = (s: string): string => s.replace('-', MINUS)
 export function fmtSig(x: number, sig = 3): string {
   if (!Number.isFinite(x)) return x > 0 ? '∞' : x < 0 ? `${MINUS}∞` : '—'
   if (x === 0) return '0'
-  return fixMinus(nf({ maximumSignificantDigits: sig }).format(x))
+  return fixMinus(nfSig(sig).format(x))
 }
 
 /** Fixed decimals with grouping: fmtFixed(9.80665, 2) → "9.81". */
 export function fmtFixed(x: number, digits: number): string {
   if (!Number.isFinite(x)) return x > 0 ? '∞' : '—'
-  const s = nf({ minimumFractionDigits: digits, maximumFractionDigits: digits }).format(x)
+  const s = nfFixed(digits).format(x)
   return fixMinus(s === '-0' || /^-0\.0*$/.test(s) ? s.slice(1) : s)
 }
 

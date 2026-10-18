@@ -247,3 +247,11 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* ?still (dev and QA builds only): no CSS motion, so screenshots compare pixel for pixel */
+html.still *,
+html.still *::before,
+html.still *::after {
+  animation: none !important;
+  transition: none !important;
+}

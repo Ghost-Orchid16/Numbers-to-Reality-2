@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, type CSSProperties } from 'react'
+import { setText } from '../lib/dom'
 import type { Formatted } from '../lib/format'
 import { renderTex } from '../lib/tex'
 import { onReadout } from '../lib/ticker'
@@ -41,19 +42,17 @@ export function LiveMetric({
     const update = () => {
       if (scrambling || !revealed) return
       const f = readRef.current()
-      const v = valueRef.current
-      const u = unitRef.current
-      if (v && v.textContent !== f.value) v.textContent = f.value
-      if (u && u.textContent !== f.unit) u.textContent = f.unit
+      setText(valueRef.current, f.value)
+      setText(unitRef.current, f.unit)
     }
-    const off = onReadout(update)
+    const off = onReadout(update, rootRef.current)
     // ScrambleText the first time the number appears on screen.
     const io = new IntersectionObserver((entries) => {
       if (!entries.some((e) => e.isIntersecting) || revealed) return
       revealed = true
       scrambling = true
       const f = readRef.current()
-      if (unitRef.current) unitRef.current.textContent = f.unit
+      setText(unitRef.current, f.unit)
       gsap.to(valueRef.current, {
         duration: 0.9,
         scrambleText: { text: f.value, chars: '0123456789', speed: 0.6 },

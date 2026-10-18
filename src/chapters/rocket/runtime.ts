@@ -1,5 +1,7 @@
 import { create } from 'zustand'
+import { STILL } from '../../perf/still'
 import { usePrefs } from '../../state/prefs'
+import { FIXED_DT } from '../../sim/core/types'
 import { DEFAULT_ROCKET, type RocketParams } from '../../sim/rocket/model'
 import { RocketSim, type EndReason, type RocketSnapshot } from '../../sim/rocket/rocketSim'
 import { computeTrajectory, sampleTrajectory, type Trajectory } from '../../sim/rocket/trajectory'
@@ -121,7 +123,8 @@ export function tickRocket(dt: number): void {
       rocket.sim.step(Math.min(dt, 0.1) * ui.timeScale)
       if (rocket.sim.ended) useRocketUI.setState({ playing: false, ended: rocket.sim.ended })
     }
-    rocket.view = rocket.sim.metrics()
+    // refilled in place each frame: readers always read rocket.view fresh, never keep it
+    rocket.view = rocket.sim.metrics(rocket.view)
     if (rocket.liveSteamEnd === null && rocket.view.h > 250) rocket.liveSteamEnd = rocket.sim.time
     // Before LAUNCH the rocket waits on the pad with its engine cold.
     rocket.viewTime = ui.launched ? rocket.sim.time : -1
@@ -130,13 +133,25 @@ export function tickRocket(dt: number): void {
   } else {
     const t = rocket.scrubTime
     rocket.viewTime = t
-    rocket.view = sampleTrajectory(rocket.trajectory, Math.max(0, t))
+    rocket.view = sampleTrajectory(rocket.trajectory, Math.max(0, t), rocket.view)
     const mq = rocket.trajectory.maxQ
     rocket.maxQPassed = !!mq && t >= mq.t
     if (mq) rocket.maxQ = mq
   }
   if (rocket.viewTime < 0) coldEngine(rocket.view)
 }
+
+// ?still (QA builds): put the live flight at exactly T+t and hold it there, for screenshots.
+if (STILL)
+  (window as unknown as { __nrStill: { flyTo: (t: number) => void } }).__nrStill = {
+    flyTo(t: number) {
+      const ui = useRocketUI.getState()
+      ui.reset()
+      ui.play()
+      rocket.sim.stepN(Math.round(t / FIXED_DT))
+      ui.pause()
+    },
+  }
 
 /** Before ignition the engine is cold: no thrust, no mass flow, the pad carries the weight. */
 function coldEngine(v: RocketSnapshot): void {

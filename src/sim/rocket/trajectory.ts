@@ -133,36 +133,38 @@ export function findMaxQ(track: Track<TrackKey>): Trajectory['maxQ'] {
   return { q: value, t, h: track.sample('h', t), v: track.sample('v', t) }
 }
 
-/** Interpolated snapshot at time t (flags taken from the last sample at or before t). */
-export function sampleTrajectory(traj: Trajectory, t: number): RocketSnapshot {
+/**
+ * Interpolated snapshot at time t (flags taken from the last sample at or before t).
+ * Pass `out` to fill an existing snapshot instead of allocating one (the per-frame path).
+ */
+export function sampleTrajectory(traj: Trajectory, t: number, out?: RocketSnapshot): RocketSnapshot {
   const tr = traj.track
   const tc = Math.max(0, Math.min(t, traj.duration))
-  const val = (k: TrackKey) => tr.sample(k, tc)
-  return {
-    t: tc,
-    v: val('v'),
-    gamma: val('gamma'),
-    h: val('h'),
-    x: val('x'),
-    m: val('m'),
-    onPad: tr.sampleStep('onPad', tc) > 0.5,
-    pitched: tr.sampleStep('pitched', tc) > 0.5,
-    engineOn: tr.sampleStep('engineOn', tc) > 0.5,
-    thrust: val('thrust'),
-    g: val('g'),
-    weight: val('weight'),
-    rho: val('rho'),
-    drag: val('drag'),
-    q: val('q'),
-    fFree: val('fFree'),
-    fNet: val('fNet'),
-    accel: val('accel'),
-    twr: val('twr'),
-    mdot: val('mdot'),
-    propellant: val('propellant'),
-    gravityLoss: val('gravityLoss'),
-    dragLoss: val('dragLoss'),
-  }
+  const o = out ?? ({} as RocketSnapshot)
+  o.t = tc
+  o.v = tr.sample('v', tc)
+  o.gamma = tr.sample('gamma', tc)
+  o.h = tr.sample('h', tc)
+  o.x = tr.sample('x', tc)
+  o.m = tr.sample('m', tc)
+  o.onPad = tr.sampleStep('onPad', tc) > 0.5
+  o.pitched = tr.sampleStep('pitched', tc) > 0.5
+  o.engineOn = tr.sampleStep('engineOn', tc) > 0.5
+  o.thrust = tr.sample('thrust', tc)
+  o.g = tr.sample('g', tc)
+  o.weight = tr.sample('weight', tc)
+  o.rho = tr.sample('rho', tc)
+  o.drag = tr.sample('drag', tc)
+  o.q = tr.sample('q', tc)
+  o.fFree = tr.sample('fFree', tc)
+  o.fNet = tr.sample('fNet', tc)
+  o.accel = tr.sample('accel', tc)
+  o.twr = tr.sample('twr', tc)
+  o.mdot = tr.sample('mdot', tc)
+  o.propellant = tr.sample('propellant', tc)
+  o.gravityLoss = tr.sample('gravityLoss', tc)
+  o.dragLoss = tr.sample('dragLoss', tc)
+  return o
 }
 
 /** Planet radius for a trajectory (m) — convenience for rendering curvature. */

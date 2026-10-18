@@ -1,0 +1,650 @@
+{
+  "meta": {
+    "date": "2026-10-10T02:52:01.178Z",
+    "git": "C2",
+    "chromium": "141.0.7390.37",
+    "renderer": "SwiftShader (software) — compare main-thread time, counts and hitches, not fps",
+    "viewport": "1280×720",
+    "canvasDpr": 0.5,
+    "step": "140 px/frame",
+    "quality": "high"
+  },
+  "cdp": {
+    "pass1": {
+      "ScriptDuration": 0.8675,
+      "LayoutDuration": 0.1514,
+      "RecalcStyleDuration": 0.1797,
+      "TaskDuration": 2.6242,
+      "LayoutCount": 416,
+      "RecalcStyleCount": 1052
+    },
+    "pass2": {
+      "ScriptDuration": 0.829,
+      "LayoutDuration": 0.1829,
+      "RecalcStyleDuration": 0.163,
+      "TaskDuration": 2.8416,
+      "LayoutCount": 370,
+      "RecalcStyleCount": 977
+    },
+    "heapUsedMB": 14.3,
+    "nodes": 3261
+  },
+  "rendererInfo": {
+    "start": {
+      "programs": 43,
+      "geometries": 59,
+      "textures": 45
+    },
+    "afterPass1": {
+      "programs": 43,
+      "geometries": 59,
+      "textures": 45
+    },
+    "afterPass2": {
+      "programs": 43,
+      "geometries": 59,
+      "textures": 45
+    }
+  },
+  "traceDuringPass2": {
+    "frames": 232,
+    "scriptMs": {
+      "p50": 5.421,
+      "p95": 10.022,
+      "max": 13.273
+    },
+    "styleMs": {
+      "p50": 0.373,
+      "p95": 1.086,
+      "max": 22.324
+    },
+    "layoutMs": {
+      "p50": 0.441,
+      "p95": 2.353,
+      "max": 3.339
+    },
+    "paintMs": {
+      "p50": 2.792,
+      "p95": 5.345,
+      "max": 10.479
+    },
+    "scriptStyleLayoutMs": {
+      "p50": 6.807,
+      "p95": 12.156,
+      "max": 32.429,
+      "mean": 7.646
+    },
+    "elementsRestyled": 12792,
+    "recalcsOf500PlusElements": 4,
+    "layouts": 364
+  },
+  "page": {
+    "meta": {
+      "date": "2026-10-10T02:51:57.888Z",
+      "url": "http://localhost:4330/?bench&harness&step=140&quality=high&dpr=0.5",
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0.7390.37 Safari/537.36",
+      "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "viewport": "1280×720",
+      "dpr": 0.5,
+      "quality": "high",
+      "pinned": true,
+      "mode": "140 px/frame",
+      "pageHeight": 12727
+    },
+    "passes": [
+      {
+        "pass": 1,
+        "frames": 231,
+        "seconds": 235.9572,
+        "fps": 0.9789911051665302,
+        "frameMs": {
+          "p50": 950,
+          "p95": 1183.2499999999964,
+          "p99": 3024.8999999999987,
+          "max": 9133
+        },
+        "worst": {
+          "ms": 9133,
+          "y": 420,
+          "section": "hero",
+          "tag": "pass1-down"
+        },
+        "jsMs": {
+          "p50": 3.7000000001862645,
+          "p95": 9.549999999813735,
+          "max": 33.90000000037253
+        },
+        "mainMs": {
+          "p50": 8,
+          "p95": 16.450000000186265,
+          "max": 39.799999999813735
+        },
+        "drawCalls": {
+          "p50": 62,
+          "max": 107
+        },
+        "triangles": {
+          "p50": 335446,
+          "max": 900246
+        },
+        "longFrames": {
+          "over50": 230,
+          "over100": 230,
+          "bySection": {
+            "hero": 57,
+            "title": 18,
+            "marquee": 2,
+            "flight": 64,
+            "lab": 11,
+            "maths": 33,
+            "reality": 14,
+            "closing": 31
+          }
+        },
+        "loaf": {
+          "count": 226,
+          "bySection": {
+            "hero": 53,
+            "title": 18,
+            "marquee": 2,
+            "flight": 64,
+            "lab": 11,
+            "maths": 33,
+            "reality": 14,
+            "closing": 31
+          },
+          "worst": [
+            {
+              "start": 25753.39999999944,
+              "duration": 9119.5,
+              "blocking": 0,
+              "scriptMs": 9106.900000000373,
+              "rafMs": 12,
+              "layoutMs": 0.599999999627471,
+              "y": 277,
+              "tag": "pass1-down",
+              "scripts": [
+                {
+                  "invoker": "FrameRequestCallback",
+                  "source": "(anonymous) index-DeBo-3QA.js:4617",
+                  "ms": 5,
+                  "forcedLayoutMs": 0
+                }
+              ],
+              "section": "hero"
+            },
+            {
+              "start": 39992,
+              "duration": 3104.0999999996275,
+              "blocking": 0,
+              "scriptMs": 3096.399999999441,
+              "rafMs": 7.2000000001862645,
+              "layoutMs": 0.5,
+              "y": 1259,
+              "tag": "pass1-down",
+              "scripts": [],
+              "section": "hero"
+            },
+            {
+              "start": 52096,
+              "duration": 2837.2999999998137,
+              "blocking": 0,
+              "scriptMs": 2830,
+              "rafMs": 7,
+              "layoutMs": 0.2999999998137355,
+              "y": 2520,
+              "tag": "pass1-down",
+              "scripts": [],
+              "section": "title"
+            },
+            {
+              "start": 218596,
+              "duration": 2627.7000000001863,
+              "blocking": 0,
+              "scriptMs": 2623.2999999998137,
+              "rafMs": 4.2000000001862645,
+              "layoutMs": 0.20000000018626451,
+              "y": 1507,
+              "tag": "pass1-up",
+              "scripts": [],
+              "section": "hero"
+            },
+            {
+              "start": 44987.09999999963,
+              "duration": 1427.6000000005588,
+              "blocking": 0,
+              "scriptMs": 1418,
+              "rafMs": 9.299999999813735,
+              "layoutMs": 0.30000000074505806,
+              "y": 1680,
+              "tag": "pass1-down",
+              "scripts": [],
+              "section": "hero"
+            },
+            {
+              "start": 70257,
+              "duration": 1375,
+              "blocking": 0,
+              "scriptMs": 1362.5999999996275,
+              "rafMs": 11.600000000558794,
+              "layoutMs": 0.7999999998137355,
+              "y": 4760,
+              "tag": "pass1-down",
+              "scripts": [],
+              "section": "flight"
+            },
+            {
+              "start": 68916.70000000019,
+              "duration": 1336,
+              "blocking": 0,
+              "scriptMs": 1327.7999999998137,
+              "rafMs": 7.5,
+              "layoutMs": 0.7000000001862645,
+              "y": 4618,
+              "tag": "pass1-down",
+              "scripts": [],
+              "section": "flight"
+            },
+            {
+              "start": 50882.799999999814,
+              "duration": 1211.5,
+              "blocking": 0,
+              "scriptMs": 1205.9000000003725,
+              "rafMs": 5.2999999998137355,
+              "layoutMs": 0.2999999998137355,
+              "y": 2379,
+              "tag": "pass1-down",
+              "scripts": [],
+              "section": "title"
+            }
+          ]
+        },
+        "created": {
+          "programs": 0,
+          "geometries": 0,
+          "textures": 0
+        },
+        "reactCommits": 3,
+        "scrollTriggerRefreshes": 0,
+        "sections": {
+          "hero": {
+            "frames": 58,
+            "fps": 0.8351668605789724,
+            "p95": 2717.400000000019,
+            "jsP95": 14.144999999785792,
+            "mainP95": 18.280000000027933
+          },
+          "title": {
+            "frames": 18,
+            "fps": 0.8731125005456952,
+            "p95": 1475.7900000000004,
+            "jsP95": 20.235000000102435,
+            "mainP95": 27.84500000034458
+          },
+          "marquee": {
+            "frames": 2,
+            "fps": 0.9302758267826404,
+            "p95": 1097.4950000000001,
+            "jsP95": 8.339999999664723,
+            "mainP95": 13.195000000018627
+          },
+          "flight": {
+            "frames": 64,
+            "fps": 1.091574579274751,
+            "p95": 1147.4950000000003,
+            "jsP95": 8.855000000260768,
+            "mainP95": 16.859999999683343
+          },
+          "lab": {
+            "frames": 11,
+            "fps": 1.1092847130482133,
+            "p95": 1074.949999999997,
+            "jsP95": 7.6499999994412065,
+            "mainP95": 12
+          },
+          "maths": {
+            "frames": 33,
+            "fps": 1.0426968564269619,
+            "p95": 1083.3,
+            "jsP95": 6.919999999925492,
+            "mainP95": 11.539999999850988
+          },
+          "reality": {
+            "frames": 14,
+            "fps": 1.0606462365998734,
+            "p95": 1066.6349999999977,
+            "jsP95": 4.85999999968335,
+            "mainP95": 9.920000000065192
+          },
+          "closing": {
+            "frames": 31,
+            "fps": 1.0214571910586245,
+            "p95": 1100.0000000000146,
+            "jsP95": 8.250000000465661,
+            "mainP95": 10.75
+          }
+        }
+      },
+      {
+        "pass": 2,
+        "frames": 231,
+        "seconds": 214.158,
+        "fps": 1.0786428711512062,
+        "frameMs": {
+          "p50": 916.6000000000349,
+          "p95": 1108.2999999999884,
+          "p99": 1149.9699999999896,
+          "max": 3099.9000000000233
+        },
+        "worst": {
+          "ms": 3099.9000000000233,
+          "y": 2660,
+          "section": "title",
+          "tag": "pass2-down"
+        },
+        "jsMs": {
+          "p50": 3.200000001117587,
+          "p95": 7.899999999906868,
+          "max": 29.000000000931323
+        },
+        "mainMs": {
+          "p50": 7.7999999998137355,
+          "p95": 12.950000000186265,
+          "max": 33.700000000186265
+        },
+        "drawCalls": {
+          "p50": 62,
+          "max": 107
+        },
+        "triangles": {
+          "p50": 335446,
+          "max": 900246
+        },
+        "longFrames": {
+          "over50": 231,
+          "over100": 231,
+          "bySection": {
+            "hero": 58,
+            "title": 18,
+            "marquee": 2,
+            "flight": 64,
+            "lab": 11,
+            "maths": 33,
+            "reality": 14,
+            "closing": 31
+          }
+        },
+        "loaf": {
+          "count": 227,
+          "bySection": {
+            "hero": 54,
+            "title": 18,
+            "marquee": 2,
+            "flight": 64,
+            "lab": 11,
+            "maths": 33,
+            "reality": 14,
+            "closing": 31
+          },
+          "worst": [
+            {
+              "start": 271867.0999999996,
+              "duration": 3093,
+              "blocking": 0,
+              "scriptMs": 3086.7999999998137,
+              "rafMs": 6,
+              "layoutMs": 0.20000000018626451,
+              "y": 2519,
+              "tag": "pass2-down",
+              "scripts": [],
+              "section": "title"
+            },
+            {
+              "start": 432596.2000000002,
+              "duration": 3048.199999999255,
+              "blocking": 0,
+              "scriptMs": 3041.7999999998137,
+              "rafMs": 5.2000000001862645,
+              "layoutMs": 1.199999999254942,
+              "y": 1508,
+              "tag": "pass2-up",
+              "scripts": [],
+              "section": "hero"
+            },
+            {
+              "start": 316360.5,
+              "duration": 1150.5,
+              "blocking": 0,
+              "scriptMs": 1140.5999999996275,
+              "rafMs": 9.5,
+              "layoutMs": 0.40000000037252903,
+              "y": 9099,
+              "tag": "pass2-down",
+              "scripts": [
+                {
+                  "invoker": "FrameRequestCallback",
+                  "source": "(anonymous) index-DeBo-3QA.js:4617",
+                  "ms": 6,
+                  "forcedLayoutMs": 0
+                }
+              ],
+              "section": "maths"
+            },
+            {
+              "start": 370446.2000000002,
+              "duration": 1140.3999999994412,
+              "blocking": 0,
+              "scriptMs": 1134.2999999998137,
+              "rafMs": 5.7999999998137355,
+              "layoutMs": 0.2999999998137355,
+              "y": 11028,
+              "tag": "pass2-up",
+              "scripts": [],
+              "section": "reality"
+            },
+            {
+              "start": 391901.2000000002,
+              "duration": 1125.5,
+              "blocking": 0,
+              "scriptMs": 1114.7999999998137,
+              "rafMs": 9.599999999627471,
+              "layoutMs": 1.1000000005587935,
+              "y": 7808,
+              "tag": "pass2-up",
+              "scripts": [
+                {
+                  "invoker": "FrameRequestCallback",
+                  "source": "(anonymous) index-DeBo-3QA.js:4617",
+                  "ms": 6,
+                  "forcedLayoutMs": 0
+                }
+              ],
+              "section": "flight"
+            },
+            {
+              "start": 351205.2999999998,
+              "duration": 1114.4000000003725,
+              "blocking": 0,
+              "scriptMs": 1109,
+              "rafMs": 4.400000000372529,
+              "layoutMs": 1,
+              "y": 12007,
+              "tag": "pass2-down",
+              "scripts": [],
+              "section": "closing"
+            },
+            {
+              "start": 436757.7000000002,
+              "duration": 1113.7999999998137,
+              "blocking": 0,
+              "scriptMs": 1109.5,
+              "rafMs": 4.099999999627471,
+              "layoutMs": 0.20000000018626451,
+              "y": 1227,
+              "tag": "pass2-up",
+              "scripts": [],
+              "section": "hero"
+            },
+            {
+              "start": 312597.39999999944,
+              "duration": 1111.800000000745,
+              "blocking": 0,
+              "scriptMs": 1106.300000000745,
+              "rafMs": 5.099999999627471,
+              "layoutMs": 0.40000000037252903,
+              "y": 8537,
+              "tag": "pass2-down",
+              "scripts": [],
+              "section": "lab"
+            }
+          ]
+        },
+        "created": {
+          "programs": 0,
+          "geometries": 0,
+          "textures": 0
+        },
+        "reactCommits": 2,
+        "scrollTriggerRefreshes": 0,
+        "sections": {
+          "hero": {
+            "frames": 58,
+            "fps": 1.0926676349962596,
+            "p95": 1116.5999999999854,
+            "jsP95": 8.200000000372526,
+            "mainP95": 13.590000000130381
+          },
+          "title": {
+            "frames": 18,
+            "fps": 0.9168423947923363,
+            "p95": 1399.9850000000006,
+            "jsP95": 19.564999999664707,
+            "mainP95": 23.330000000027923
+          },
+          "marquee": {
+            "frames": 2,
+            "fps": 1.0435690060005536,
+            "p95": 1040.7349999999656,
+            "jsP95": 6.960000000195578,
+            "mainP95": 10.084999999823047
+          },
+          "flight": {
+            "frames": 64,
+            "fps": 1.1101917335817373,
+            "p95": 1100,
+            "jsP95": 8.104999999841668,
+            "mainP95": 14.21499999994411
+          },
+          "lab": {
+            "frames": 11,
+            "fps": 1.1849745230477589,
+            "p95": 1008.3000000000175,
+            "jsP95": 7.000000000465661,
+            "mainP95": 12.600000000093132
+          },
+          "maths": {
+            "frames": 33,
+            "fps": 1.047655632418909,
+            "p95": 1129.920000000007,
+            "jsP95": 6.980000000447035,
+            "mainP95": 11.440000000223517
+          },
+          "reality": {
+            "frames": 14,
+            "fps": 1.0895450371223538,
+            "p95": 1066.6349999999888,
+            "jsP95": 6.745000000670552,
+            "mainP95": 12.279999999934807
+          },
+          "closing": {
+            "frames": 31,
+            "fps": 1.0973878628902378,
+            "p95": 1066.6499999999942,
+            "jsP95": 4.5,
+            "mainP95": 10.649999999906868
+          }
+        }
+      }
+    ],
+    "events": [
+      {
+        "t": 24886.099999999627,
+        "y": 0,
+        "kind": "commit",
+        "detail": "react-dom",
+        "section": "hero"
+      },
+      {
+        "t": 48646.09999999963,
+        "y": 1960,
+        "kind": "commit",
+        "detail": "react-dom",
+        "section": "hero"
+      },
+      {
+        "t": 215239.5,
+        "y": 2068,
+        "kind": "commit",
+        "detail": "react-dom",
+        "section": "title"
+      },
+      {
+        "t": 268924.5999999996,
+        "y": 1958,
+        "kind": "commit",
+        "detail": "react-dom",
+        "section": "hero"
+      },
+      {
+        "t": 429881.39999999944,
+        "y": 2068,
+        "kind": "commit",
+        "detail": "react-dom",
+        "section": "title"
+      }
+    ],
+    "sectionsPx": [
+      {
+        "name": "hero",
+        "top": 0,
+        "bottom": 2376
+      },
+      {
+        "name": "title",
+        "top": 2376,
+        "bottom": 3671.0625
+      },
+      {
+        "name": "marquee",
+        "top": 3671.0625,
+        "bottom": 3794
+      },
+      {
+        "name": "flight",
+        "top": 3794,
+        "bottom": 8258
+      },
+      {
+        "name": "lab",
+        "top": 8258,
+        "bottom": 9021.984375
+      },
+      {
+        "name": "maths",
+        "top": 9021.984375,
+        "bottom": 11334.0625
+      },
+      {
+        "name": "reality",
+        "top": 11334.0625,
+        "bottom": 12333.203125
+      },
+      {
+        "name": "closing",
+        "top": 12333.203125,
+        "bottom": 12726.9375
+      }
+    ]
+  },
+  "consoleErrors": []
+}

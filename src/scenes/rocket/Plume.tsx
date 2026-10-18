@@ -1,6 +1,7 @@
 import { useFrame } from '@react-three/fiber'
 import { useMemo, useRef } from 'react'
 import { AdditiveBlending, Color, CylinderGeometry, ShaderMaterial, type Group, type PointLight } from 'three'
+import { ambientDt, ambientTime } from '../../perf/still'
 import { smoothstep } from '../../sim/core/math'
 import { useDisposable } from '../../three/useDisposable'
 import { frame } from './frame'
@@ -118,14 +119,19 @@ export function Plume() {
     if (!g) return
     const on = frame.firing
     g.visible = on
-    if (light.current) light.current.visible = on
-    if (!on) return
+    // the light stays in the scene at zero intensity when the engine is off: a constant light
+    // count keeps every lit material on one shader program (no recompiles at ignition/MECO)
+    if (!on) {
+      if (light.current) light.current.intensity = 0
+      return
+    }
     const startup = smoothstep(0, 0.25, frame.ignitionAge)
     const vac = 1 - Math.pow(frame.ambient, 0.35)
-    const flicker = 0.95 + 0.05 * Math.sin(state.clock.elapsedTime * 71) * Math.sin(state.clock.elapsedTime * 13)
+    const k = ambientTime(state.clock.elapsedTime)
+    const flicker = 0.95 + 0.05 * Math.sin(k * 71) * Math.sin(k * 13)
     const length = 26 * Math.sqrt(Math.max(frame.thrustFrac, 0.05)) * (1 + 1.5 * vac) * (0.55 + 0.45 * startup)
     for (const m of mats) {
-      m.uniforms.uTime.value += dt
+      m.uniforms.uTime.value += ambientDt(dt)
       m.uniforms.uVac.value = vac
       m.uniforms.uDiamonds.value = Math.pow(frame.ambient, 0.7)
     }
@@ -137,10 +143,12 @@ export function Plume() {
   })
 
   return (
-    <group ref={group} position={[0, RK.nozzleExitY, 0]} visible={false}>
-      <mesh geometry={geometry} material={outer} frustumCulled={false} renderOrder={5} />
-      <mesh geometry={geometry} material={inner} frustumCulled={false} renderOrder={6} scale={[0.62, 1, 0.62]} />
-      <pointLight ref={light} position={[0, -3, 0]} color="#FF8B42" distance={0} decay={2} intensity={0} />
-    </group>
+    <>
+      <group ref={group} position={[0, RK.nozzleExitY, 0]} visible={false}>
+        <mesh geometry={geometry} material={outer} frustumCulled={false} renderOrder={5} />
+        <mesh geometry={geometry} material={inner} frustumCulled={false} renderOrder={6} scale={[0.62, 1, 0.62]} />
+      </group>
+      <pointLight ref={light} position={[0, RK.nozzleExitY - 3, 0]} color="#FF8B42" distance={0} decay={2} intensity={0} />
+    </>
   )
 }

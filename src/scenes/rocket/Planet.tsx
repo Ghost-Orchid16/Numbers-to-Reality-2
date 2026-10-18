@@ -23,6 +23,7 @@ void main() {
   vWorld = w.xyz;
   vN = normalize(position);
   gl_Position = projectionMatrix * viewMatrix * w;
+  gl_Position.z = gl_Position.w; // on the far plane: behind every opaque pixel (see SkyDome)
 }
 `
 
@@ -114,7 +115,6 @@ export function Planet() {
           uTime: { value: 0 },
         },
         depthWrite: false,
-        depthTest: false,
       }),
     [],
   )
@@ -156,13 +156,16 @@ export function Planet() {
     u.uAltitude.value = camAlt
     u.uDip.value = Math.acos(R / (R + camAlt))
     u.uPresence.value = frame.handoff.presence
+    // at presence 0 the surface outputs exactly uInk, the colour the sky clears to (SkyDome)
+    s.visible = frame.handoff.presence > 0
     atmoMaterial.uniforms.uFade.value = smoothstep(45000, 140000, camAlt)
     a.visible = atmoMaterial.uniforms.uFade.value > 0.001
   })
 
   return (
     <>
-      <mesh ref={surfaceMesh} geometry={geometry} material={material} renderOrder={-90} frustumCulled={false} />
+      {/* after the opaques and the sky (1), before the trajectory lines (3); see SkyDome */}
+      <mesh ref={surfaceMesh} geometry={geometry} material={material} renderOrder={2} frustumCulled={false} />
       <mesh ref={atmoMesh} geometry={geometry} material={atmoMaterial} renderOrder={-89} frustumCulled={false} />
     </>
   )
