@@ -305,7 +305,10 @@ run-to-run variation was measurable at any of the 66 positions.
 | Hero title weight axis: write only integer `--wght` values | Fractional weights render differently (sub-pixel); not pixel-identical at intermediate scroll positions | skips writes only when the scrub moves < 1 weight unit per frame |
 | `anticipatePin` on the flight pin | Lenis scrolls in JavaScript and runs `ScrollTrigger.update` in the same frame, so the pin never jumps on wheel; anticipatePin would pin a few pixels early — a visible jump | none on desktop |
 | `matrixAutoUpdate = false` on static meshes | not worth the code | `updateMatrixWorld` self time 18 ms per profiled pass (≈ 0.08 ms per frame) |
-| Grain `mix-blend-mode`, vignette, the lab panel's `backdrop-filter`, the countdown's SVG filter | part of the look | `npm run perf:css` (below) |
+| Film grain: a 200 % × 200 % animated layer with `mix-blend-mode: overlay` over everything | part of the look (the brief's 2–4 % grain) | the largest compositing cost measured by `npm run perf:css`: hiding it took the frame p50 while scrolling from 83 → 9 ms (lab), 69 → 17 ms (hero), 124 → 86 ms (flight); the blend mode alone, 69 → 35 ms in the hero |
+| The countdown's heat-shimmer SVG filter (`feTurbulence` + displacement) | part of the look | while the countdown is on screen, frame p50 at rest 70 → 5 ms without it |
+| The lab panel's `backdrop-filter`, the vignette | part of the look | no difference measurable above the noise |
+| | *`perf:css` numbers: software compositing, canvas hidden, medians of three rounds, still ±50 % between runs — they rank the effects, nothing more.* | |
 | Shadow maps | none are rendered (the canvas has no `shadows`); left as they were | — |
 | Lower MSAA | the canvas already has `antialias: false` (SMAA in post) | — |
 
